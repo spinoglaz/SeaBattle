@@ -1,0 +1,47 @@
+gwt {
+    gwtVersion='2.8.2' // Should match the gwt version used for building the gwt backend
+    maxHeapSize="1G" // Default 256m is not enough for gwt compiler. GWT is HUNGRY
+    minHeapSize="1G"
+
+    src = files(file("src/")) // Needs to be in front of "modules" below.
+    modules 'ru.dasha.seabattle.client.GdxDefinition'
+    devModules 'ru.dasha.seabattle.client.GdxDefinitionSuperdev'
+    project.webAppDirName = 'webapp'
+
+    compiler {
+        strict = true;
+        disableCastChecking = true;
+    }
+}
+
+def buildDist = "../../server/src/main/resources/static"
+
+task dist(dependsOn: [clean, compileGwt]) {
+    doLast {
+        file(buildDist).mkdirs()
+        copy {
+            from "build/gwt/out"
+            into buildDist
+        }
+        copy {
+            from "webapp"
+            into buildDist
+            }
+        copy {
+            from "war"
+            into buildDist
+        }
+    }
+}
+
+task addSource {
+    doLast {
+        sourceSets.main.compileClasspath += files(project(':client:core').sourceSets.main.allJava.srcDirs)
+    }
+}
+
+tasks.compileGwt.dependsOn(addSource)
+tasks.draftCompileGwt.dependsOn(addSource)
+
+sourceCompatibility = 1.7
+sourceSets.main.java.srcDirs = [ "src/" ]

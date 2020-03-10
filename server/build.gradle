@@ -14,6 +14,7 @@ repositories {
 
 dependencies {
 	compile project(':engine')
+	implementation project(":client:html")
 	implementation 'org.springframework.boot:spring-boot-starter-websocket'
 	testImplementation('org.springframework.boot:spring-boot-starter-test') {
 		exclude group: 'org.junit.vintage', module: 'junit-vintage-engine'
@@ -23,3 +24,5 @@ dependencies {
 test {
 	useJUnitPlatform()
 }
+
+tasks.bootRun.dependsOn(':client:html:dist')
