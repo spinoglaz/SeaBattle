@@ -31,6 +31,8 @@ function create ()
         text.text += "\n";
     };
     ws.onopen = function(event){
-        ws.send("hello from client");
+        ws.send(JSON.stringify({
+            startBattle: {},
+        }));
     };
 }
