@@ -52,6 +52,10 @@ public class Battle {
         return fieldSizeY;
     }
 
+    public int getPlayerCount() {
+        return fields.length;
+    }
+
     public void setField(int player, Field field) throws InvalidFieldException, WrongBattleStatusException {
         if(playerStatuses[player] != PlayerStatus.PLACING_SHIPS) {
             throw new WrongBattleStatusException();
