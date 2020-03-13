@@ -5,11 +5,23 @@ ui = {
     placingShips: document.getElementById('placingShips'),
     placingShipsField: document.querySelector('#placingShips .field'),
     placingShipsExitButton: document.getElementById('placingShipsExit'),
+    loader: document.getElementById('loader'),
+    loaderText: document.getElementById('loaderText'),
+    showLoader: function(text) {
+        ui.loader.classList.add('active');
+        ui.loaderText.content = text;
+    },
+    hideLoader: function() {
+        ui.loader.classList.remove('active');
+    }
 };
 
 ui.startBattleButton.onclick = function() {
     ui.mainMenu.classList.remove('active');
-    ui.placingShips.classList.add('active');
+    ui.showLoader("Waiting for a battle...");
+    ws.send(JSON.stringify({
+        startBattle: {},
+    }));
 };
 
 ui.placingShipsExitButton.onclick = function() {
@@ -21,13 +33,17 @@ ui.placingShipsField.oncontextmenu = function() {
     return false;
 };
 
+ui.showLoader("Connecting to the server...");
 protocol = location.protocol === "https:" ? "wss" : "ws";
 ws = new WebSocket(protocol + '://' + location.host + '/ws');
 ws.onmessage = function(event){
-    console.log(event);
+    var serverMessage = JSON.parse(event.data);
+    if (serverMessage.joinedToBattle) {
+        ui.hideLoader();
+        ui.placingShips.classList.add('active');
+    }
 };
 ws.onopen = function(event){
-    ws.send(JSON.stringify({
-        startBattle: {},
-    }));
+    ui.hideLoader();
+    ui.mainMenu.classList.add('active');
 };
