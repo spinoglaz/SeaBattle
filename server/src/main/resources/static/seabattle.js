@@ -3,7 +3,9 @@ ui = {
     startBattleButton: document.getElementById('startBattle'),
     startBotBattleButton: document.getElementById('startBotBattle'),
     placingShips: document.getElementById('placingShips'),
-    placingShipsField: document.querySelector('#placingShips .field'),
+    placingField: document.querySelector('#placingShips .field'),
+    placingGrid: document.querySelector('#placingShips .field-grid'),
+    placingFleet: document.querySelector('#placingShips .fleet'),
     placingShipsExitButton: document.getElementById('placingShipsExit'),
     loader: document.getElementById('loader'),
     loaderText: document.getElementById('loaderText'),
@@ -13,7 +15,39 @@ ui = {
     },
     hideLoader: function() {
         ui.loader.classList.remove('active');
-    }
+    },
+    setFleet: function(shipSizes) {
+        this.clearFleet();
+        let previousSize = 0;
+        for (let i = 0; i < shipSizes.length; ++i) {
+            let shipSize = shipSizes[i];
+            if (previousSize !== 0 && previousSize !== shipSize) {
+                this.placingFleet.appendChild(document.createElement('br'));
+            }
+            let shipContainer = this.createShipContainer(shipSize);
+            this.placingFleet.appendChild(shipContainer);
+            shipContainer.onclick = function() {
+                shipContainer.classList.add('selected');
+            };
+            previousSize = shipSize;
+        }
+    },
+    clearFleet: function() {
+        this.placingFleet.textContent = '';
+    },
+    createShipContainer: function(shipSize) {
+        var shipContainer = document.createElement('div');
+        shipContainer.classList.add('ship-container');
+        var ship = document.createElement('div');
+        ship.classList.add('ship');
+        shipContainer.appendChild(ship);
+        for (var i = 0; i < shipSize; ++i) {
+            var shipCell = document.createElement('div');
+            shipCell.classList.add('ship-cell');
+            ship.appendChild(shipCell);
+        }
+        return shipContainer;
+    },
 };
 
 game = {
@@ -55,15 +89,24 @@ game = {
         this.battle = {
             playerCount: joinedBattleEvent.playerCount,
             fieldSize: joinedBattleEvent.fieldSize,
-            shipSizes: joinedBattleEvent.shipSizes,
-        }
+            shipSizes: joinedBattleEvent.shipSizes.sort(),
+        };
+        ui.setFleet(this.battle.shipSizes);
     }
 };
 
 ui.startBattleButton.onclick = game.startBattle;
 ui.placingShipsExitButton.onclick = game.exitPlacingShips;
-ui.placingShipsField.oncontextmenu = function() {
+ui.placingGrid.oncontextmenu = function() {
     return false;
+};
+ui.placingGrid.onmousemove = function(e) {
+    const bounds = this.getBoundingClientRect();
+    let pixelsX = e.pageX - bounds.left;
+    let pixelsY = e.pageY - bounds.top;
+    let x = Math.round(pixelsX / bounds.width * game.battle.fieldSize - 0.5);
+    let y = Math.round(pixelsY / bounds.height * game.battle.fieldSize - 0.5);
+    console.log(x + ' ' + y);
 };
 
 game.start();
