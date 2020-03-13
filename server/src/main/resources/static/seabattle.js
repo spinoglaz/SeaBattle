@@ -16,6 +16,15 @@ ui = {
     hideLoader: function() {
         ui.loader.classList.remove('active');
     },
+    setFieldSize: function(fieldSize) {
+        this.placingGrid.textContent = '';
+        let cellCount = fieldSize * fieldSize;
+        for(let i = 0; i < cellCount; ++i) {
+            let cell = document.createElement('div');
+            cell.classList.add('field-cell');
+            this.placingGrid.appendChild(cell);
+        }
+    },
     setFleet: function(shipSizes) {
         this.clearFleet();
         let previousSize = 0;
@@ -91,6 +100,7 @@ game = {
             fieldSize: joinedBattleEvent.fieldSize,
             shipSizes: joinedBattleEvent.shipSizes.sort(),
         };
+        ui.setFieldSize(this.battle.fieldSize);
         ui.setFleet(this.battle.shipSizes);
     }
 };
