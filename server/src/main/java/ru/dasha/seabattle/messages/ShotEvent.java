@@ -5,4 +5,5 @@ public class ShotEvent {
     public int x;
     public int y;
     public int player;
+    public int target;
 }

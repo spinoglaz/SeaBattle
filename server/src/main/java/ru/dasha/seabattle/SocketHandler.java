@@ -10,6 +10,7 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 import ru.dasha.seabattle.exceptions.InvalidFieldException;
 import ru.dasha.seabattle.exceptions.ShipPlacementException;
 import ru.dasha.seabattle.exceptions.WrongBattleStatusException;
+import ru.dasha.seabattle.exceptions.WrongTargetException;
 import ru.dasha.seabattle.messages.*;
 
 import java.io.IOException;
@@ -98,11 +99,11 @@ public class SocketHandler extends TextWebSocketHandler {
         }
         Field field = new Field(battle.getFieldSizeX(), battle.getFieldSizeY());
         try {
-           for(int i = 0; i < placeShips.ships.length; i++) {
-               PlaceShipsCommand.Ship commandShip = placeShips.ships[i];
-               Ship ship = new Ship(commandShip.x, commandShip.y, commandShip.size, commandShip.vertical);
-               field.placeShip(ship);
-           }
+            for(int i = 0; i < placeShips.ships.length; i++) {
+                PlaceShipsCommand.Ship commandShip = placeShips.ships[i];
+                Ship ship = new Ship(commandShip.x, commandShip.y, commandShip.size, commandShip.vertical);
+                field.placeShip(ship);
+            }
             battle.setField(sessionData.player, field);
         } catch (InvalidFieldException | WrongBattleStatusException | ShipPlacementException e) {
             return;
@@ -113,11 +114,24 @@ public class SocketHandler extends TextWebSocketHandler {
         }
     }
 
-    private void shoot(WebSocketSession session, ShootCommand shoot) {
-        System.out.println("shoot");
-        // TODO battle.shoot
-        // TODO send shotEvent to all players
-        // TODO send battleUpdate to all players
+    private void shoot(WebSocketSession session, ShootCommand shoot) throws IOException {
+        SessionData sessionData = sessions.get(session);
+        Battle battle = sessionData.battle;
+        try {
+            battle.shoot(sessionData.player, shoot.target, shoot.x, shoot.y);
+        } catch (WrongBattleStatusException | WrongTargetException e) {
+            return;
+        }
+        BattleUpdateEvent battleUpdate = createBattleUpdateEvent(battle);
+        ShotEvent shotEvent = new ShotEvent();
+        shotEvent.x = shoot.x;
+        shotEvent.y = shoot.y;
+        shotEvent.player = sessionData.player;
+        shotEvent.target = shoot.target;
+        for (WebSocketSession battleSession: battleSessions.get(battle)) {
+            send(battleSession, shotEvent);
+            send(battleSession, battleUpdate);
+        }
     }
 
     private BattleUpdateEvent createBattleUpdateEvent(Battle battle) {
