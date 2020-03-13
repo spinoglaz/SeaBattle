@@ -9,20 +9,34 @@ ui = {
     placingShipsExitButton: document.getElementById('placingShipsExit'),
     loader: document.getElementById('loader'),
     loaderText: document.getElementById('loaderText'),
-    placingFleetShips: [],
-    placingShipIndex: 0,
+    placingState: {
+        grabShip: 0,
+        grabVertical: false,
+        grabOffset: 0,
+        grabElement: null,
+        fleet: [],
+    },
     start: function() {
         this.placingGrid.oncontextmenu = function() {
+            ui.placingState.grabVertical = !ui.placingState.grabVertical;
             return false;
         };
         this.placingGrid.onmousemove = function(e) {
             const bounds = this.getBoundingClientRect();
             let pixelsX = e.pageX - bounds.left;
             let pixelsY = e.pageY - bounds.top;
-            let x = Math.round(pixelsX / bounds.width * game.battle.fieldSize - 0.5);
-            let y = Math.round(pixelsY / bounds.height * game.battle.fieldSize - 0.5);
-            console.log(x + ' ' + y);
+            let x = Math.round(pixelsX / bounds.width * ui.battle.fieldSize - 0.5);
+            let y = Math.round(pixelsY / bounds.height * ui.battle.fieldSize - 0.5);
+            // TODO preview ship placement
         };
+        this.placingGrid.onclick = function(e) {
+            const bounds = this.getBoundingClientRect();
+            let pixelsX = e.pageX - bounds.left;
+            let pixelsY = e.pageY - bounds.top;
+            let x = Math.round(pixelsX / bounds.width * ui.battle.fieldSize - 0.5);
+            let y = Math.round(pixelsY / bounds.height * ui.battle.fieldSize - 0.5);
+            ui._placeCurrentShip(x, y);
+        }
     },
     showLoader: function(text) {
         ui.loader.classList.add('active');
@@ -32,16 +46,15 @@ ui = {
         ui.loader.classList.remove('active');
     },
     startPlacingShips: function(battle) {
+        // TODO remove placed ships from previous session
+        this.battle = battle;
         this.hideLoader();
         this.placingShips.classList.add('active');
-        this.setFieldSize(battle.fieldSize);
-        this.setFleet(battle.shipSizes);
-
-        // TODO remove debug placements
-        this.placeShip(0, 7, 5);
-        this.placeShip(9, 2, 1);
+        this._setFieldSize(battle.fieldSize);
+        this._setFleet(battle.shipSizes);
+        this._grabShip(0);
     },
-    setFieldSize: function(fieldSize) {
+    _setFieldSize: function(fieldSize) {
         this.placingGrid.textContent = '';
         let cellCount = fieldSize * fieldSize;
         for(let i = 0; i < cellCount; ++i) {
@@ -50,50 +63,121 @@ ui = {
             this.placingGrid.appendChild(cell);
         }
     },
-    setFleet: function(shipSizes) {
-        this.clearFleet();
+    _setFleet: function(shipSizes) {
+        this._clearFleet();
         let previousSize = 0;
         for (let i = 0; i < shipSizes.length; ++i) {
             let shipSize = shipSizes[i];
             if (previousSize !== 0 && previousSize !== shipSize) {
                 this.placingFleet.appendChild(document.createElement('br'));
             }
-            let shipContainer = this.createShipContainer(shipSize);
+            let shipContainer = this._createShipContainer(shipSize);
             this.placingFleet.appendChild(shipContainer);
             shipContainer.onclick = function() {
-                console.log('Click on ' + i + ' ship');
-                shipContainer.classList.add('selected');
+                ui._grabShip(i);
             };
             previousSize = shipSize;
-            this.placingFleetShips.push(shipContainer);
+            this.placingState.fleet.push({
+                x: null,
+                y: null,
+                vertical: null,
+                size: shipSize,
+                element: shipContainer,
+                fieldElement: null,
+                placed: false,
+            });
         }
     },
-    placeShip: function(shipIndex, x, y) {
-        this.placingFleetShips[shipIndex].classList.add('placed');
+    _grabShip: function(index) {
+        this._ungrabShip(this.placingState.grabShip);
+        this.placingState.grabShip = index;
+        if (index != null) {
+            let fleetItem = this.placingState.fleet[index];
+            if (fleetItem.placed) {
+                this._unplaceShip(index);
+            }
+            fleetItem.element.classList.add('selected');
+        }
     },
-    clearFleet: function() {
-        this.placingFleetShips = [];
+    _ungrabShip: function(index) {
+        if (index == null)
+            return;
+        this.placingState.fleet[index].element.classList.remove('selected');
+    },
+    _placeCurrentShip: function(x, y) {
+        if (this.placingState.grabShip === null) {
+            return;
+        }
+        this._placeShip(this.placingState.grabShip, x, y, this.placingState.grabVertical);
+        const nextShipToPlace = this._decideNextShipToPlace();
+        this._grabShip(nextShipToPlace);
+        if (nextShipToPlace === null) {
+            // TODO all ships are placed, reveal the continue button
+        }
+    },
+    _decideNextShipToPlace: function() {
+        const shipSizes = ui.battle.shipSizes;
+        for (let i = 0; i < shipSizes.length; ++i) {
+            const nextShipToPlace = (this.placingState.grabShip + i) % shipSizes.length;
+            if (!this.placingState.fleet[nextShipToPlace].placed) {
+                return nextShipToPlace;
+            }
+        }
+        return null;
+    },
+    _placeShip: function(shipIndex, x, y, vertical) {
+        const fleetItem = this.placingState.fleet[shipIndex];
+        fleetItem.x = x;
+        fleetItem.y = y;
+        fleetItem.vertical = vertical;
+        fleetItem.placed = true;
+        fleetItem.element.classList.add('placed');
+        fleetItem.fieldElement = this._createShip(fleetItem.size);
+        if (vertical === true) {
+            fleetItem.fieldElement.classList.add('vertical');
+        }
+        fleetItem.fieldElement.style.left = 'calc(35px * ' + x + ')';
+        fleetItem.fieldElement.style.top = 'calc(35px * ' + y + ')';
+        this.placingField.appendChild(fleetItem.fieldElement);
+    },
+    _unplaceShip: function(index) {
+        const fleetItem = this.placingState.fleet[index];
+        fleetItem.x = null;
+        fleetItem.y = null;
+        fleetItem.vertical = null;
+        fleetItem.placed = false;
+        fleetItem.element.classList.remove('placed');
+        this.placingField.removeChild(fleetItem.fieldElement);
+    },
+    _clearFleet: function() {
+        this.placingState.fleet = [];
         this.placingFleet.textContent = '';
     },
-    createShipContainer: function(shipSize) {
-        var shipContainer = document.createElement('div');
+    _createShipContainer: function(shipSize) {
+        const shipContainer = document.createElement('div');
         shipContainer.classList.add('ship-container');
-        var ship = document.createElement('div');
-        ship.classList.add('ship');
+        const ship = this._createShip(shipSize);
         shipContainer.appendChild(ship);
-        for (var i = 0; i < shipSize; ++i) {
-            var shipCell = document.createElement('div');
+        return shipContainer;
+    },
+    _createShip: function(shipSize) {
+        let ship = document.createElement('div');
+        ship.classList.add('ship');
+        for (let i = 0; i < shipSize; ++i) {
+            const shipCell = document.createElement('div');
             shipCell.classList.add('ship-cell');
             ship.appendChild(shipCell);
         }
-        return shipContainer;
+        return ship;
     },
 };
+
+// TODO extract placer from ui
 
 server = {
     connect: function(callbacks) {
         this.callbacks = callbacks;
-        protocol = location.protocol === "https:" ? "wss" : "ws";
+        const protocol = location.protocol === "https:" ? "wss" : "ws";
         this.ws = new WebSocket(protocol + '://' + location.host + '/ws');
         this.ws.onopen = this.callbacks.connected;
         this.ws.onmessage = function(event) {server.onMessage(event);}
@@ -112,7 +196,7 @@ server = {
     },
     onMessage: function(event) {
         console.log(this);
-        var serverMessage = JSON.parse(event.data);
+        const serverMessage = JSON.parse(event.data);
         if (serverMessage.joinedToBattle) {
             this.callbacks.joinedToBattle(serverMessage.joinedToBattle);
         }
@@ -173,13 +257,6 @@ game = {
     onPlaceShips: function(ships) {
         commandShips = [];
         server.placeShips(commandShips)
-    },
-    placingState: {
-        grabShip: 0,
-        grabVertical: false,
-        grabOffset: 0,
-        grabElement: null,
-        fleet: [],
     },
 };
 
