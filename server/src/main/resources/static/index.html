@@ -1,10 +1,34 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <title>Sea Battle</title>
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.15.1/dist/phaser-arcade-physics.min.js"></script>
-    <script src="seabattle.js"></script>
+    <link href="https://fonts.googleapis.com/css?family=Bungee|Kanit:700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="seabattle.css">
 </head>
 <body>
-
+    <div id="container">
+        <div id="overlay">
+            <div id="mainMenu" class="screen">
+                <span class="title-1">Sea Battle</span>
+                <button class="button-1" id="startBattle">Battle</button>
+                <button class="button-1" id="startBotBattle">Bot Battle</button>
+            </div>
+            <div id="placingShips" class="screen">
+                <span class="title-2">Place your ships</span>
+                <button class="button-2" id="placingShipsExit">&#8592; Exit</button>
+                <button class="button-2" id="resetField">Reset</button>
+                <button class="button-2" id="placeShips">Go &#8594;</button>
+                <div class="field field-placing">
+                    <div class="field-grid"></div>
+                </div>
+                <div class="fleet fleet-placing"></div>
+            </div>
+            <div id="loader" class="screen">
+                <span class="loader-text" id="loaderText">Loading...</span>
+            </div>
+        </div>
+    </div>
+    <script src="seabattle.js"></script>
 </body>
 </html>
