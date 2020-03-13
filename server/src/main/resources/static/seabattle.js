@@ -9,7 +9,7 @@ ui = {
     loaderText: document.getElementById('loaderText'),
     showLoader: function(text) {
         ui.loader.classList.add('active');
-        ui.loaderText.content = text;
+        ui.loaderText.textContent = text;
     },
     hideLoader: function() {
         ui.loader.classList.remove('active');

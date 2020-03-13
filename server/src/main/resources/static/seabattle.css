@@ -151,9 +151,9 @@ body {
     width: 100%;
     text-align: center;
     color: white;
-    font: bold 80px/1 "Bungee", sans-serif;
-    text-shadow: 1px 2px #288ce3, 2px 4px #288ce3, 3px 6px #288ce3, 4px 8px #288ce3, 5px 10px #288ce3;
-    letter-spacing: 4px;
+    font: bold 54px/1 "Bungee", sans-serif;
+    text-shadow: 1px 2px #288ce3, 2px 4px #288ce3;
+    letter-spacing: 1px;
 }
 
 .field {
