@@ -21,15 +21,10 @@ game = {
         ui.showLoader("Connecting to the server...");
         protocol = location.protocol === "https:" ? "wss" : "ws";
         ws = new WebSocket(protocol + '://' + location.host + '/ws');
+        ws.onopen = game.onConnectedToServer;
         ws.onmessage = function(event){
             var serverMessage = JSON.parse(event.data);
-            if (serverMessage.joinedToBattle) {
-                game.onJoinedToBattle(serverMessage.joinedToBattle);
-            }
-        };
-        ws.onopen = function(event){
-            ui.hideLoader();
-            ui.mainMenu.classList.add('active');
+            game.onServerMessage(serverMessage);
         };
     },
     startBattle: function() {
@@ -44,9 +39,24 @@ game = {
         ui.mainMenu.classList.add('active');
         // TODO leave the battle or reconnect websocket
     },
-    onJoinedToBattle: function(battleInfo) {
+    onConnectedToServer: function() {
+        ui.hideLoader();
+        ui.mainMenu.classList.add('active');
+    },
+    onServerMessage: function(serverMessage) {
+        if (serverMessage.joinedToBattle) {
+            game.onJoinedToBattle(serverMessage.joinedToBattle);
+        }
+    },
+    onJoinedToBattle: function(joinedBattleEvent) {
         ui.hideLoader();
         ui.placingShips.classList.add('active');
+        this.player = joinedBattleEvent.player;
+        this.battle = {
+            playerCount: joinedBattleEvent.playerCount,
+            fieldSize: joinedBattleEvent.fieldSize,
+            shipSizes: joinedBattleEvent.shipSizes,
+        }
     }
 };
 
