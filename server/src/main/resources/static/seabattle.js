@@ -1,38 +1,33 @@
-var config = {
-    type: Phaser.AUTO,
-    width: 1024,
-    height: 768,
-    scene: {
-        preload: preload,
-        create: create
-    },
+ui = {
+    mainMenu: document.getElementById('mainMenu'),
+    startBattleButton: document.getElementById('startBattle'),
+    startBotBattleButton: document.getElementById('startBotBattle'),
+    placingShips: document.getElementById('placingShips'),
+    placingShipsField: document.querySelector('#placingShips .field'),
+    placingShipsExitButton: document.getElementById('placingShipsExit'),
 };
 
-var game = new Phaser.Game(config);
-
-var txtStyle = {
-    font: '18px Arial',
-    fill: '#00ffff',
+ui.startBattleButton.onclick = function() {
+    ui.mainMenu.classList.remove('active');
+    ui.placingShips.classList.add('active');
 };
 
-function preload ()
-{
-    this.load.setBaseURL('http://labs.phaser.io');
-}
+ui.placingShipsExitButton.onclick = function() {
+    ui.placingShips.classList.remove('active');
+    ui.mainMenu.classList.add('active');
+};
 
-function create ()
-{
-    text = this.add.text(10, 10, '', txtStyle);
+ui.placingShipsField.oncontextmenu = function() {
+    return false;
+};
 
-    protocol = location.protocol === "https:" ? "wss" : "ws";
-    ws = new WebSocket(protocol + '://' + location.host + '/ws');
-    ws.onmessage = function(event){
-        text.text += event.data;
-        text.text += "\n";
-    };
-    ws.onopen = function(event){
-        ws.send(JSON.stringify({
-            startBattle: {},
-        }));
-    };
-}
+protocol = location.protocol === "https:" ? "wss" : "ws";
+ws = new WebSocket(protocol + '://' + location.host + '/ws');
+ws.onmessage = function(event){
+    console.log(event);
+};
+ws.onopen = function(event){
+    ws.send(JSON.stringify({
+        startBattle: {},
+    }));
+};
