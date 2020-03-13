@@ -1,6 +1,5 @@
 package ru.dasha.seabattle;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
@@ -14,7 +13,7 @@ import ru.dasha.seabattle.exceptions.WrongTargetException;
 import ru.dasha.seabattle.messages.*;
 
 import java.io.IOException;
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -75,7 +74,7 @@ public class SocketHandler extends TextWebSocketHandler {
             sessionData.battle = pendingBattle;
             sessionData.player = 0;
             pendingBattlePlayerCount = 1;
-            battleSessions.put(pendingBattle, new ArrayList<>(pendingBattle.getPlayerCount()));
+            battleSessions.put(pendingBattle, Arrays.asList(new WebSocketSession[pendingBattle.getPlayerCount()]));
         }
         battleSessions.get(sessionData.battle).set(sessionData.player, session);
 
