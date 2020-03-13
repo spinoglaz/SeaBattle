@@ -7,6 +7,5 @@ public enum PlayerStatusDTO {
     SHOOTING,
     WAITING,
     WINNER,
-    LOOSER,
-    LEFT
+    LOSER,
 }

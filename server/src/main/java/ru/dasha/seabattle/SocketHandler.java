@@ -7,9 +7,14 @@ import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
+import ru.dasha.seabattle.exceptions.InvalidFieldException;
+import ru.dasha.seabattle.exceptions.ShipPlacementException;
+import ru.dasha.seabattle.exceptions.WrongBattleStatusException;
 import ru.dasha.seabattle.messages.*;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -19,6 +24,7 @@ public class SocketHandler extends TextWebSocketHandler {
     private ObjectMapper objectMapper = new ObjectMapper();
 
     private Map<WebSocketSession, SessionData> sessions = new ConcurrentHashMap<>();
+    private Map<Battle, List<WebSocketSession>> battleSessions = new ConcurrentHashMap<>();
     private Battle pendingBattle;
     private int pendingBattlePlayerCount;
 
@@ -46,6 +52,10 @@ public class SocketHandler extends TextWebSocketHandler {
 
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
+        SessionData sessionData = sessions.get(session);
+        if (sessionData.battle != null) {
+            battleSessions.get(sessionData.battle).set(sessionData.player, null);
+        }
         sessions.remove(session);
     }
 
@@ -64,13 +74,15 @@ public class SocketHandler extends TextWebSocketHandler {
             sessionData.battle = pendingBattle;
             sessionData.player = 0;
             pendingBattlePlayerCount = 1;
+            battleSessions.put(pendingBattle, new ArrayList<>(pendingBattle.getPlayerCount()));
         }
+        battleSessions.get(sessionData.battle).set(sessionData.player, session);
+
         JoinedBattleEvent joinedBattle = new JoinedBattleEvent();
         joinedBattle.playerCount = sessionData.battle.getPlayerCount();
         joinedBattle.fieldSize = sessionData.battle.getFieldSizeX();
         joinedBattle.shipSizes = sessionData.battle.getShipSizes();
         joinedBattle.player = sessionData.player;
-
         send(session, joinedBattle);
     }
 
@@ -78,12 +90,75 @@ public class SocketHandler extends TextWebSocketHandler {
         System.out.println("startBotBattle");
     }
 
-    private void placeShips(WebSocketSession session, PlaceShipsCommand placeShips) {
-        System.out.println("placeShips");
+    private void placeShips(WebSocketSession session, PlaceShipsCommand placeShips) throws IOException {
+        SessionData sessionData = sessions.get(session);
+        Battle battle = sessionData.battle;
+        if(battle == null) {
+            return;
+        }
+        Field field = new Field(battle.getFieldSizeX(), battle.getFieldSizeY());
+        try {
+           for(int i = 0; i < placeShips.ships.length; i++) {
+               PlaceShipsCommand.Ship commandShip = placeShips.ships[i];
+               Ship ship = new Ship(commandShip.x, commandShip.y, commandShip.size, commandShip.vertical);
+               field.placeShip(ship);
+           }
+            battle.setField(sessionData.player, field);
+        } catch (InvalidFieldException | WrongBattleStatusException | ShipPlacementException e) {
+            return;
+        }
+        BattleUpdateEvent battleUpdate = createBattleUpdateEvent(battle);
+        for (WebSocketSession battleSession: battleSessions.get(battle)) {
+            send(battleSession, battleUpdate);
+        }
     }
 
     private void shoot(WebSocketSession session, ShootCommand shoot) {
         System.out.println("shoot");
+        // TODO battle.shoot
+        // TODO send shotEvent to all players
+        // TODO send battleUpdate to all players
+    }
+
+    private BattleUpdateEvent createBattleUpdateEvent(Battle battle) {
+        BattleUpdateEvent battleUpdate = new BattleUpdateEvent();
+        switch (battle.getStatus()) {
+            case PLACING_SHIPS:
+                battleUpdate.status = BattleStatusDTO.PLACING_SHIPS;
+                break;
+            case SHOOTING:
+                battleUpdate.status = BattleStatusDTO.SHOOTING;
+                break;
+            case FINISHED:
+                battleUpdate.status = BattleStatusDTO.FINISHED;
+                break;
+        }
+        List<WebSocketSession> sessions = battleSessions.get(battle);
+        for (int i = 0; i < battle.getPlayerCount(); i++) {
+            if (sessions.get(i) == null) {
+                battleUpdate.players[i] = PlayerStatusDTO.NO_PLAYER;
+                continue;
+            }
+            switch (battle.getPlayerStatus(i)) {
+                case PLACING_SHIPS:
+                    battleUpdate.players[i] = PlayerStatusDTO.PLACING_SHIPS;
+                    break;
+                case SHOOTING:
+                    battleUpdate.players[i] = PlayerStatusDTO.SHOOTING;
+                    break;
+                case WAITING:
+                    battleUpdate.players[i] = PlayerStatusDTO.WAITING;
+                    break;
+                case WINNER:
+                    battleUpdate.players[i] = PlayerStatusDTO.WINNER;
+                    break;
+                case LOSER:
+                    battleUpdate.players[i] = PlayerStatusDTO.LOSER;
+                    break;
+            }
+        }
+
+        return battleUpdate;
     }
 
     private void send(WebSocketSession session, JoinedBattleEvent joinedBattle) throws IOException {
