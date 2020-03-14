@@ -124,6 +124,34 @@ function Field(size, styleClass) {
     this.reset(size);
 }
 
+function Fleet(shipSizes, styleClass) {
+    this.size = 0;
+    this.element = document.createElement('div');
+    this.element.classList.add('fleet');
+    if (styleClass)
+        this.element.classList.add(styleClass);
+    this.ships = [];
+
+    this.reset = function(shipSizes) {
+        this.ships = [];
+        this.element.textContent = '';
+
+        this.size = shipSizes.length;
+        let previousSize = 0;
+        for (let i = 0; i < shipSizes.length; ++i) {
+            const shipSize = shipSizes[i];
+            if (previousSize !== 0 && previousSize !== shipSize) {
+                this.element.appendChild(document.createElement('br'));
+            }
+            const ship = new Ship(shipSize);
+            this.element.appendChild(ship.element);
+            this.ships.push(ship);
+            previousSize = shipSize;
+        }
+    };
+    this.reset(shipSizes);
+}
+
 ui = {
     mainMenuScreen: document.getElementById('mainMenuScreen'),
     startBattleButton: document.getElementById('startBattle'),
@@ -132,7 +160,6 @@ ui = {
     placeShipsButton: document.getElementById('placeShips'),
     resetFieldButton: document.getElementById('resetField'),
     placingGrid: document.querySelector('#placingShipsScreen .field-grid'),
-    placingFleet: document.querySelector('#placingShipsScreen .fleet'),
     placingShipsExitButton: document.getElementById('placingShipsExit'),
     loader: document.getElementById('loader'),
     loaderText: document.getElementById('loaderText'),
@@ -148,6 +175,9 @@ ui = {
     start: function(callbacks) {
         this.placingField = new Field(0, 'field-placing');
         this.placingShipsScreen.appendChild(this.placingField.element);
+
+        this.placingFleet = new Fleet([], 'fleet-placing');
+        this.placingShipsScreen.appendChild(this.placingFleet.element);
 
         this.placingState.preview = new Ship(1, 'preview');
         this.placingState.preview.disableMouseEvents();
@@ -203,7 +233,8 @@ ui = {
         this.placeShipsButton.classList.remove('revealed');
         this.placingShipsScreen.classList.add('active');
         this.placingField.reset(battle.fieldSize);
-        this._setFleet(battle.shipSizes);
+        this.placingFleet.reset(battle.shipSizes);
+        this._setFleet(this.placingFleet);
         this._grabShip(0);
     },
     _resetField: function() {
@@ -218,22 +249,15 @@ ui = {
         this.placingState.preview.setVertical(this.placingState.grabVertical);
         this._validatePreview();
     },
-    _setFleet: function(shipSizes) {
-        this._clearFleet();
-        let previousSize = 0;
-        for (let i = 0; i < shipSizes.length; ++i) {
-            let shipSize = shipSizes[i];
-            if (previousSize !== 0 && previousSize !== shipSize) {
-                this.placingFleet.appendChild(document.createElement('br'));
-            }
-            const ship = new Ship(shipSize);
-            this.placingFleet.appendChild(ship.element);
+    _setFleet: function(fleet) {
+        this.placingState.fleet = [];
+        for (let i = 0; i < fleet.size; ++i) {
+            const ship = fleet.ships[i];
             ship.element.onmousedown = function(e) {
                 if (e.button === 0) {
                     ui._grabShip(i);
                 }
             };
-            previousSize = shipSize;
             this.placingState.fleet.push({
                 fleetShip: ship,
                 placedShip: null,
@@ -314,10 +338,6 @@ ui = {
         this.placeShipsButton.classList.remove('revealed');
         this.placingState.preview.show();
         this._validatePreview();
-    },
-    _clearFleet: function() {
-        this.placingState.fleet = [];
-        this.placingFleet.textContent = '';
     },
     _validatePreview: function() {
         const isValid = this._isValidShip(this.placingState.preview);
