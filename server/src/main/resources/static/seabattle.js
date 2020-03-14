@@ -8,6 +8,7 @@ function Ship(size, styleClass) {
     this.element = document.createElement('div');
     this.element.classList.add('ship');
     this.cells = [];
+    this.invalid = false;
     if (styleClass) {
         this.element.classList.add(styleClass);
     }
@@ -25,11 +26,14 @@ function Ship(size, styleClass) {
         this.element.oncontextmenu = function() {return false};
     };
     this.setPosition = function(x, y) {
+        this.x = x;
+        this.y = y;
         // TODO remove hard-code
         this.element.style.left = (35 * x) + 'px';
         this.element.style.top = (35 * y) + 'px';
     };
     this.setVertical = function(vertical) {
+        this.vertical = vertical;
         if (vertical)
             this.element.classList.add('vertical');
         else
@@ -43,6 +47,19 @@ function Ship(size, styleClass) {
             this._addCell();
         }
         this.size = size;
+    };
+    this.getSizeX = function() {
+        return this.vertical ? 1 : this.size;
+    };
+    this.getSizeY = function() {
+        return this.vertical ? this.size : 1;
+    };
+    this.setInvalid = function(invalid) {
+        this.invalid = invalid;
+        if (invalid)
+            this.element.classList.add('invalid');
+        else
+            this.element.classList.remove('invalid');
     };
     this.setPlaced = function(placed) {
         if (placed)
@@ -90,8 +107,6 @@ ui = {
         fleet: [],
         allPlaced: false,
         preview: null,
-        x: null,
-        y: null,
     },
     start: function(callbacks) {
         this.placingState.preview = new Ship(1, 'preview');
@@ -112,19 +127,18 @@ ui = {
             let y = Math.round(pixelsY / bounds.height * ui.battle.fieldSize - 0.5);
             x = clamp(x, 0, ui.battle.fieldSize - 1);
             y = clamp(y, 0, ui.battle.fieldSize - 1);
-            self.placingState.x = x;
-            self.placingState.y = y;
             if (!self.placingState.allPlaced) {
                 self.placingState.preview.setPosition(x, y);
                 self.placingState.preview.show();
             }
+            self._validatePreview();
         };
         this.placingGrid.onmouseleave = function() {
             self.placingState.preview.hide();
         };
         this.placingGrid.onmousedown = function(e) {
             if (e.button === 0) {
-                self._placeCurrentShip(self.placingState.x, self.placingState.y);
+                self._placeCurrentShip();
             }
             if (e.button === 2) {
                 self._toggleVertical();
@@ -155,6 +169,7 @@ ui = {
     _toggleVertical: function() {
         this.placingState.grabVertical = !this.placingState.grabVertical;
         this.placingState.preview.setVertical(this.placingState.grabVertical);
+        this._validatePreview();
     },
     _setFieldSize: function(fieldSize) {
         this.placingGrid.textContent = '';
@@ -207,6 +222,7 @@ ui = {
             fleetItem.fleetShip.setSelected(true);
             this.placingState.preview.setVertical(this.placingState.grabVertical);
             this.placingState.preview.setSize(fleetItem.size);
+            this._validatePreview();
         }
     },
     _ungrabShip: function(index) {
@@ -214,10 +230,11 @@ ui = {
             return;
         this.placingState.fleet[index].fleetShip.setSelected(false);
     },
-    _placeCurrentShip: function(x, y) {
-        if (this.placingState.grabIndex === null) {
-            return;
-        }
+    _placeCurrentShip: function() {
+        if (this.placingState.grabIndex === null) return;
+        if (this.placingState.preview.invalid) return;
+        const x = this.placingState.preview.x;
+        const y = this.placingState.preview.y;
         this._placeShip(this.placingState.grabIndex, x, y, this.placingState.grabVertical);
         const nextShipToPlace = this._decideNextShipToPlace();
         this._grabShip(nextShipToPlace);
@@ -267,10 +284,37 @@ ui = {
         this.placingState.allPlaced = false;
         this.placeShipsButton.classList.remove('revealed');
         this.placingState.preview.show();
+        this._validatePreview();
     },
     _clearFleet: function() {
         this.placingState.fleet = [];
         this.placingFleet.textContent = '';
+    },
+    _validatePreview: function() {
+        const isValid = this._isValidShip(this.placingState.preview);
+        this.placingState.preview.setInvalid(!isValid);
+    },
+    _isValidShip: function(ship) {
+        const x = ship.x;
+        const y = ship.y;
+        if (x < 0) return false;
+        if (y < 0) return false;
+        const right = x + ship.getSizeX() - 1;
+        const bottom = y + ship.getSizeY() - 1;
+        if (right >= this.battle.fieldSize) return false;
+        if (bottom >= this.battle.fieldSize) return false;
+        for (let i = 0; i < this.placingState.fleet.length; ++i) {
+            const placed = this.placingState.fleet[i].placedShip;
+            if (placed == null)
+                continue;
+            const placedX = placed.x - 1;
+            const placedY = placed.y - 1;
+            const placedRight = placed.x + placed.getSizeX();
+            const placedBottom = placed.y + placed.getSizeY();
+            if (x <= placedRight && y <= placedBottom && right >= placedX && bottom >= placedY)
+                return false;
+        }
+        return true;
     },
 };
 
