@@ -216,11 +216,6 @@ body {
     margin: 8px 8px;
     padding: 8px 8px;
     border-radius: 4px;
-    border: 1px solid transparent;
-}
-
-.ship-container.selected, .ship-container:hover {
-    border: 1px solid rgba(255, 255, 255, 1.0);
 }
 
 .ship {
@@ -254,14 +249,12 @@ body {
     position: absolute;
 }
 
-.test-ship-1 {
-    top: calc(35px * 1);
-    left: calc(35px * 2);
+.field .ship:hover, .field .ship.selected, .selected .ship {
+    box-shadow: 0 0 0 3px #c9ff3c;
 }
 
-.test-ship-2 {
-    top: calc(35px * 5);
-    left: calc(35px * 7);
+.ship.preview {
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.5);
 }
 
 .field .ship-cell {

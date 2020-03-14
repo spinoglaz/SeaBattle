@@ -1,3 +1,58 @@
+function Ship(size, styleClass) {
+    this.size = 0;
+    this.vertical = false;
+    this.element = document.createElement('div');
+    this.element.classList.add('ship');
+    this.cells = [];
+    if (styleClass) {
+        this.element.classList.add(styleClass);
+    }
+
+    this._addCell = function() {
+        const cell = document.createElement('div');
+        cell.classList.add('ship-cell');
+        this.element.appendChild(cell);
+        this.cells.push(cell);
+    };
+    this.disableMouseEvents = function() {
+        this.element.style.pointerEvents = 'none';
+    };
+    this.disableContextMenu = function() {
+        this.element.oncontextmenu = function() {return false};
+    };
+    this.setPosition = function(x, y) {
+        this.element.style.left = 'calc(35px * ' + x + ')';
+        this.element.style.top = 'calc(35px * ' + y + ')';
+    };
+    this.setVertical = function(vertical) {
+        if (vertical)
+            this.element.classList.add('vertical');
+        else
+            this.element.classList.remove('vertical');
+    };
+    this.setSize = function(size) {
+        for(let i = size; i < this.size; ++i) {
+            this.element.removeChild(this.cells.pop());
+        }
+        for (let i = this.size; i < size; ++i) {
+            this._addCell();
+        }
+        this.size = size;
+    };
+    this.setVisible = function(visible) {
+        this.element.style.visibility = visible ? 'visible' : 'hidden';
+    };
+    this.hide = function() {
+        this.setVisible(false);
+    };
+    this.show = function() {
+        this.setVisible(true);
+    };
+
+    this.setSize(size);
+    this.disableContextMenu();
+}
+
 ui = {
     mainMenuScreen: document.getElementById('mainMenuScreen'),
     startBattleButton: document.getElementById('startBattle'),
@@ -12,19 +67,23 @@ ui = {
     loaderText: document.getElementById('loaderText'),
     battleScreen: document.getElementById('battleScreen'),
     placingState: {
-        grabShip: 0,
+        grabIndex: 0,
         grabVertical: false,
-        grabOffset: 0,
-        grabElement: null,
+        grabOffset: 0,  // TODO Implement it
         fleet: [],
+        preview: null,
     },
     start: function(callbacks) {
+        this.placingState.preview = new Ship(1, 'preview');
+        this.placingState.preview.disableMouseEvents();
+        this.placingField.appendChild(this.placingState.preview.element);
+
         this.startBattleButton.onclick = callbacks.startBattle;
         this.placingShipsExitButton.onclick = callbacks.exitPlacingShips;
         const self = this;
         this.placeShipsButton.onclick = function() {callbacks.placeShips(self.placingState.fleet);};
         this.placingGrid.oncontextmenu = function() {
-            ui.placingState.grabVertical = !ui.placingState.grabVertical;
+            self._toggleVertical();
             return false;
         };
         this.placingGrid.onmousemove = function(e) {
@@ -33,9 +92,12 @@ ui = {
             let pixelsY = e.pageY - bounds.top;
             let x = Math.round(pixelsX / bounds.width * ui.battle.fieldSize - 0.5);
             let y = Math.round(pixelsY / bounds.height * ui.battle.fieldSize - 0.5);
-            // TODO preview ship placement
+            self.placingState.preview.setPosition(x, y);
         };
         this.placingGrid.onmousedown = function(e) {
+            if (e.button !== 0) {
+                return;
+            }
             const bounds = this.getBoundingClientRect();
             let pixelsX = e.pageX - bounds.left;
             let pixelsY = e.pageY - bounds.top;
@@ -65,6 +127,10 @@ ui = {
         this._setFleet(battle.shipSizes);
         this._grabShip(0);
     },
+    _toggleVertical: function() {
+        this.placingState.grabVertical = !this.placingState.grabVertical;
+        this.placingState.preview.setVertical(this.placingState.grabVertical);
+    },
     _setFieldSize: function(fieldSize) {
         this.placingGrid.textContent = '';
         let cellCount = fieldSize * fieldSize;
@@ -84,8 +150,10 @@ ui = {
             }
             let shipContainer = this._createShipContainer(shipSize);
             this.placingFleet.appendChild(shipContainer);
-            shipContainer.onmousedown = function() {
-                ui._grabShip(i);
+            shipContainer.onmousedown = function(e) {
+                if (e.button === 0) {
+                    ui._grabShip(i);
+                }
             };
             previousSize = shipSize;
             this.placingState.fleet.push({
@@ -100,14 +168,22 @@ ui = {
         }
     },
     _grabShip: function(index) {
-        this._ungrabShip(this.placingState.grabShip);
-        this.placingState.grabShip = index;
-        if (index != null) {
-            let fleetItem = this.placingState.fleet[index];
+        this._ungrabShip(this.placingState.grabIndex);
+        this.placingState.grabIndex = index;
+        if (index == null) {
+            this.placingState.preview.hide();
+        }
+        else {
+            const fleetItem = this.placingState.fleet[index];
             if (fleetItem.placed) {
+                this.placingState.grabVertical = fleetItem.vertical;
+                this.placingState.preview.setPosition(fleetItem.x, fleetItem.y);
                 this._unplaceShip(index);
             }
             fleetItem.element.classList.add('selected');
+            this.placingState.preview.setVertical(this.placingState.grabVertical);
+            this.placingState.preview.setSize(fleetItem.size);
+            this.placingState.preview.show();
         }
     },
     _ungrabShip: function(index) {
@@ -116,10 +192,10 @@ ui = {
         this.placingState.fleet[index].element.classList.remove('selected');
     },
     _placeCurrentShip: function(x, y) {
-        if (this.placingState.grabShip === null) {
+        if (this.placingState.grabIndex === null) {
             return;
         }
-        this._placeShip(this.placingState.grabShip, x, y, this.placingState.grabVertical);
+        this._placeShip(this.placingState.grabIndex, x, y, this.placingState.grabVertical);
         const nextShipToPlace = this._decideNextShipToPlace();
         this._grabShip(nextShipToPlace);
         if (nextShipToPlace === null) {
@@ -132,7 +208,7 @@ ui = {
     _decideNextShipToPlace: function() {
         const shipSizes = ui.battle.shipSizes;
         for (let i = 0; i < shipSizes.length; ++i) {
-            const nextShipToPlace = (this.placingState.grabShip + i) % shipSizes.length;
+            const nextShipToPlace = (this.placingState.grabIndex + i) % shipSizes.length;
             if (!this.placingState.fleet[nextShipToPlace].placed) {
                 return nextShipToPlace;
             }
@@ -146,12 +222,16 @@ ui = {
         fleetItem.vertical = vertical;
         fleetItem.placed = true;
         fleetItem.element.classList.add('placed');
-        fleetItem.fieldElement = this._createShip(fleetItem.size);
-        if (vertical === true) {
-            fleetItem.fieldElement.classList.add('vertical');
-        }
-        fleetItem.fieldElement.style.left = 'calc(35px * ' + x + ')';
-        fleetItem.fieldElement.style.top = 'calc(35px * ' + y + ')';
+        const ship = new Ship(fleetItem.size);
+        ship.setPosition(x, y);
+        ship.setVertical(vertical);
+        fleetItem.fieldElement = ship.element;
+        const self = this;
+        fleetItem.fieldElement.onmousedown = function(e) {
+            if (e.button === 0) {
+                self._grabShip(shipIndex);
+            }
+        };
         this.placingField.appendChild(fleetItem.fieldElement);
     },
     _unplaceShip: function(index) {
@@ -171,19 +251,9 @@ ui = {
     _createShipContainer: function(shipSize) {
         const shipContainer = document.createElement('div');
         shipContainer.classList.add('ship-container');
-        const ship = this._createShip(shipSize);
-        shipContainer.appendChild(ship);
+        const ship = new Ship(shipSize);
+        shipContainer.appendChild(ship.element);
         return shipContainer;
-    },
-    _createShip: function(shipSize) {
-        let ship = document.createElement('div');
-        ship.classList.add('ship');
-        for (let i = 0; i < shipSize; ++i) {
-            const shipCell = document.createElement('div');
-            shipCell.classList.add('ship-cell');
-            ship.appendChild(shipCell);
-        }
-        return ship;
     },
 };
 
