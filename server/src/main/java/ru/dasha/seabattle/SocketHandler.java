@@ -117,7 +117,9 @@ public class SocketHandler extends TextWebSocketHandler {
         }
         BattleUpdateEvent battleUpdate = createBattleUpdateEvent(battle);
         for (WebSocketSession battleSession: battleSessions.get(battle)) {
-            send(battleSession, battleUpdate);
+            if(battleSession != null) {
+                send(battleSession, battleUpdate);
+            }
         }
     }
 
