@@ -269,3 +269,11 @@ body {
     height: 35px;
     border: none;
 }
+
+.revealable {
+    visibility: hidden;
+}
+
+.revealable.revealed {
+    visibility: visible;
+}

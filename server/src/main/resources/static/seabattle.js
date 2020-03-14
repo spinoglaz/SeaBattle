@@ -1,14 +1,16 @@
 ui = {
-    mainMenu: document.getElementById('mainMenu'),
+    mainMenuScreen: document.getElementById('mainMenuScreen'),
     startBattleButton: document.getElementById('startBattle'),
     startBotBattleButton: document.getElementById('startBotBattle'),
-    placingShips: document.getElementById('placingShips'),
-    placingField: document.querySelector('#placingShips .field'),
-    placingGrid: document.querySelector('#placingShips .field-grid'),
-    placingFleet: document.querySelector('#placingShips .fleet'),
+    placeShipsButton: document.getElementById('placeShips'),
+    placingShipsScreen: document.getElementById('placingShipsScreen'),
+    placingField: document.querySelector('#placingShipsScreen .field'),
+    placingGrid: document.querySelector('#placingShipsScreen .field-grid'),
+    placingFleet: document.querySelector('#placingShipsScreen .fleet'),
     placingShipsExitButton: document.getElementById('placingShipsExit'),
     loader: document.getElementById('loader'),
     loaderText: document.getElementById('loaderText'),
+    battleScreen: document.getElementById('battleScreen'),
     placingState: {
         grabShip: 0,
         grabVertical: false,
@@ -16,7 +18,11 @@ ui = {
         grabElement: null,
         fleet: [],
     },
-    start: function() {
+    start: function(callbacks) {
+        this.startBattleButton.onclick = callbacks.startBattle;
+        this.placingShipsExitButton.onclick = callbacks.exitPlacingShips;
+        const self = this;
+        this.placeShipsButton.onclick = function() {callbacks.placeShips(self.placingState.fleet);};
         this.placingGrid.oncontextmenu = function() {
             ui.placingState.grabVertical = !ui.placingState.grabVertical;
             return false;
@@ -29,7 +35,7 @@ ui = {
             let y = Math.round(pixelsY / bounds.height * ui.battle.fieldSize - 0.5);
             // TODO preview ship placement
         };
-        this.placingGrid.onclick = function(e) {
+        this.placingGrid.onmousedown = function(e) {
             const bounds = this.getBoundingClientRect();
             let pixelsX = e.pageX - bounds.left;
             let pixelsY = e.pageY - bounds.top;
@@ -45,11 +51,16 @@ ui = {
     hideLoader: function() {
         ui.loader.classList.remove('active');
     },
-    startPlacingShips: function(battle) {
+    showBattle: function() {
+        ui.placingShipsScreen.classList.remove('active');
+        ui.battleScreen.classList.add('active');
+    },
+    joinBattle: function(battle) {
         // TODO remove placed ships from previous session
         this.battle = battle;
         this.hideLoader();
-        this.placingShips.classList.add('active');
+        this.placeShipsButton.classList.remove('revealed');
+        this.placingShipsScreen.classList.add('active');
         this._setFieldSize(battle.fieldSize);
         this._setFleet(battle.shipSizes);
         this._grabShip(0);
@@ -73,7 +84,7 @@ ui = {
             }
             let shipContainer = this._createShipContainer(shipSize);
             this.placingFleet.appendChild(shipContainer);
-            shipContainer.onclick = function() {
+            shipContainer.onmousedown = function() {
                 ui._grabShip(i);
             };
             previousSize = shipSize;
@@ -112,7 +123,10 @@ ui = {
         const nextShipToPlace = this._decideNextShipToPlace();
         this._grabShip(nextShipToPlace);
         if (nextShipToPlace === null) {
-            // TODO all ships are placed, reveal the continue button
+            this.placeShipsButton.classList.add('revealed');
+        }
+        else {
+            this.placeShipsButton.classList.remove('revealed');
         }
     },
     _decideNextShipToPlace: function() {
@@ -148,6 +162,7 @@ ui = {
         fleetItem.placed = false;
         fleetItem.element.classList.remove('placed');
         this.placingField.removeChild(fleetItem.fieldElement);
+        this.placeShipsButton.classList.remove('revealed');
     },
     _clearFleet: function() {
         this.placingState.fleet = [];
@@ -201,20 +216,21 @@ server = {
             this.callbacks.joinedToBattle(serverMessage.joinedToBattle);
         }
         if (serverMessage.battleUpdate) {
-            this.callbacks.battleUpdate(serverMessage.battleUpdate)
+            this.callbacks.battleUpdate(serverMessage.battleUpdate);
         }
         if (serverMessage.shot) {
-            this.callbacks.shot(serverMessage.shot)
+            this.callbacks.shot(serverMessage.shot);
         }
     },
 };
 
 game = {
     start: function() {
-        ui.start();
-        ui.startBattleButton.onclick = this.startBattle;
-        ui.placingShipsExitButton.onclick = this.exitPlacingShips;
-        ui.onPlaceShips = this.onPlaceShips;
+        ui.start({
+            startBattle: this.startBattle,
+            exitPlacingShips: this.exitPlacingShips,
+            placeShips: this.placeShips,
+        });
         ui.showLoader("Connecting to the server...");
         server.connect({
             connected: this.onConnectedToServer,
@@ -226,7 +242,7 @@ game = {
     // Server events
     onConnectedToServer: function() {
         ui.hideLoader();
-        ui.mainMenu.classList.add('active');
+        ui.mainMenuScreen.classList.add('active');
     },
     onJoinedToBattle: function(joinedBattleEvent) {
         this.player = joinedBattleEvent.player;
@@ -235,7 +251,7 @@ game = {
             fieldSize: joinedBattleEvent.fieldSize,
             shipSizes: joinedBattleEvent.shipSizes.sort(),
         };
-        ui.startPlacingShips(this.battle);
+        ui.joinBattle(this.battle);
     },
     onBattleUpdate: function() {
 
@@ -245,18 +261,28 @@ game = {
     },
     // UI events
     startBattle: function() {
-        ui.mainMenu.classList.remove('active');
+        ui.mainMenuScreen.classList.remove('active');
         ui.showLoader("Waiting for a battle...");
         server.startBattle();
     },
     exitPlacingShips: function() {
-        ui.placingShips.classList.remove('active');
-        ui.mainMenu.classList.add('active');
+        ui.placingShipsScreen.classList.remove('active');
+        ui.mainMenuScreen.classList.add('active');
         // TODO leave the battle or reconnect websocket
     },
-    onPlaceShips: function(ships) {
-        commandShips = [];
-        server.placeShips(commandShips)
+    placeShips: function(ships) {
+        const commandShips = [];
+        for (let i = 0; i < ships.length; ++i) {
+            const ship = ships[i];
+            commandShips.push({
+               x: ship.x,
+               y: ship.y,
+               vertical: ship.vertical,
+               size: ship.size,
+            });
+        }
+        server.placeShips(commandShips);
+        ui.showBattle();
     },
 };
 
