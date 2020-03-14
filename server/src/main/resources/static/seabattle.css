@@ -255,6 +255,7 @@ body {
 
 .ship.preview {
     box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.5);
+    white-space: nowrap;
 }
 
 .field .ship-cell {

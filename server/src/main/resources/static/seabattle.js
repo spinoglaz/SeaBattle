@@ -1,3 +1,7 @@
+function clamp(num, min, max) {
+    return Math.min(Math.max(num, min), max);
+}
+
 function Ship(size, styleClass) {
     this.size = 0;
     this.vertical = false;
@@ -21,8 +25,8 @@ function Ship(size, styleClass) {
         this.element.oncontextmenu = function() {return false};
     };
     this.setPosition = function(x, y) {
-        this.element.style.left = 'calc(35px * ' + x + ')';
-        this.element.style.top = 'calc(35px * ' + y + ')';
+        this.element.style.left = (35 * x) + 'px';
+        this.element.style.top = (35 * y) + 'px';
     };
     this.setVertical = function(vertical) {
         if (vertical)
@@ -71,39 +75,47 @@ ui = {
         grabVertical: false,
         grabOffset: 0,  // TODO Implement it
         fleet: [],
+        allPlaced: false,
         preview: null,
+        x: null,
+        y: null,
     },
     start: function(callbacks) {
         this.placingState.preview = new Ship(1, 'preview');
         this.placingState.preview.disableMouseEvents();
         this.placingField.appendChild(this.placingState.preview.element);
+        this.placingState.preview.hide();
 
         this.startBattleButton.onclick = callbacks.startBattle;
         this.placingShipsExitButton.onclick = callbacks.exitPlacingShips;
         const self = this;
         this.placeShipsButton.onclick = function() {callbacks.placeShips(self.placingState.fleet);};
-        this.placingGrid.oncontextmenu = function() {
-            self._toggleVertical();
-            return false;
-        };
+        this.placingGrid.oncontextmenu = function() {return false};
         this.placingGrid.onmousemove = function(e) {
             const bounds = this.getBoundingClientRect();
-            let pixelsX = e.pageX - bounds.left;
-            let pixelsY = e.pageY - bounds.top;
+            const pixelsX = e.pageX - bounds.left;
+            const pixelsY = e.pageY - bounds.top;
             let x = Math.round(pixelsX / bounds.width * ui.battle.fieldSize - 0.5);
             let y = Math.round(pixelsY / bounds.height * ui.battle.fieldSize - 0.5);
-            self.placingState.preview.setPosition(x, y);
+            x = clamp(x, 0, ui.battle.fieldSize - 1);
+            y = clamp(y, 0, ui.battle.fieldSize - 1);
+            self.placingState.x = x;
+            self.placingState.y = y;
+            if (!self.placingState.allPlaced) {
+                self.placingState.preview.setPosition(x, y);
+                self.placingState.preview.show();
+            }
+        };
+        this.placingGrid.onmouseleave = function() {
+            self.placingState.preview.hide();
         };
         this.placingGrid.onmousedown = function(e) {
-            if (e.button !== 0) {
-                return;
+            if (e.button === 0) {
+                self._placeCurrentShip(self.placingState.x, self.placingState.y);
             }
-            const bounds = this.getBoundingClientRect();
-            let pixelsX = e.pageX - bounds.left;
-            let pixelsY = e.pageY - bounds.top;
-            let x = Math.round(pixelsX / bounds.width * ui.battle.fieldSize - 0.5);
-            let y = Math.round(pixelsY / bounds.height * ui.battle.fieldSize - 0.5);
-            ui._placeCurrentShip(x, y);
+            if (e.button === 2) {
+                self._toggleVertical();
+            }
         }
     },
     showLoader: function(text) {
@@ -183,7 +195,6 @@ ui = {
             fleetItem.element.classList.add('selected');
             this.placingState.preview.setVertical(this.placingState.grabVertical);
             this.placingState.preview.setSize(fleetItem.size);
-            this.placingState.preview.show();
         }
     },
     _ungrabShip: function(index) {
@@ -198,7 +209,8 @@ ui = {
         this._placeShip(this.placingState.grabIndex, x, y, this.placingState.grabVertical);
         const nextShipToPlace = this._decideNextShipToPlace();
         this._grabShip(nextShipToPlace);
-        if (nextShipToPlace === null) {
+        this.placingState.allPlaced = nextShipToPlace === null;
+        if (this.placingState.allPlaced) {
             this.placeShipsButton.classList.add('revealed');
         }
         else {
@@ -242,7 +254,9 @@ ui = {
         fleetItem.placed = false;
         fleetItem.element.classList.remove('placed');
         this.placingField.removeChild(fleetItem.fieldElement);
+        this.placingState.allPlaced = false;
         this.placeShipsButton.classList.remove('revealed');
+        this.placingState.preview.show();
     },
     _clearFleet: function() {
         this.placingState.fleet = [];
