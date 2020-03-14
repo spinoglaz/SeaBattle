@@ -91,8 +91,9 @@ ui = {
     mainMenuScreen: document.getElementById('mainMenuScreen'),
     startBattleButton: document.getElementById('startBattle'),
     startBotBattleButton: document.getElementById('startBotBattle'),
-    placeShipsButton: document.getElementById('placeShips'),
     placingShipsScreen: document.getElementById('placingShipsScreen'),
+    placeShipsButton: document.getElementById('placeShips'),
+    resetFieldButton: document.getElementById('resetField'),
     placingField: document.querySelector('#placingShipsScreen .field'),
     placingGrid: document.querySelector('#placingShipsScreen .field-grid'),
     placingFleet: document.querySelector('#placingShipsScreen .fleet'),
@@ -117,6 +118,7 @@ ui = {
         this.startBattleButton.onclick = callbacks.startBattle;
         this.placingShipsExitButton.onclick = callbacks.exitPlacingShips;
         const self = this;
+        this.resetFieldButton.onclick = function() {self._resetField()};
         this.placeShipsButton.onclick = function() {callbacks.placeShips(self.placingState.fleet);};
         this.placingGrid.oncontextmenu = function() {return false};
         this.placingGrid.onmousemove = function(e) {
@@ -165,6 +167,13 @@ ui = {
         this._setFieldSize(battle.fieldSize);
         this._setFleet(battle.shipSizes);
         this._grabShip(0);
+    },
+    _resetField: function() {
+        for (let i = 0; i < this.placingState.fleet.length; ++i) {
+            this._unplaceShip(i);
+        }
+        this._grabShip(0);
+        this.placingState.preview.hide();
     },
     _toggleVertical: function() {
         this.placingState.grabVertical = !this.placingState.grabVertical;
@@ -275,6 +284,7 @@ ui = {
     },
     _unplaceShip: function(index) {
         const fleetItem = this.placingState.fleet[index];
+        if (!fleetItem.placedShip) return;
         fleetItem.x = null;
         fleetItem.y = null;
         fleetItem.vertical = null;
