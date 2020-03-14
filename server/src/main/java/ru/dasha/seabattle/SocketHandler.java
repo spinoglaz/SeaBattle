@@ -94,6 +94,7 @@ public class SocketHandler extends TextWebSocketHandler {
         SessionData sessionData = sessions.get(session);
         Battle battle = sessionData.battle;
         if(battle == null) {
+            sendErrorMessage(session, "You're not in battle");
             return;
         }
         Field field = new Field(battle.getFieldSizeX(), battle.getFieldSizeY());
@@ -104,7 +105,14 @@ public class SocketHandler extends TextWebSocketHandler {
                 field.placeShip(ship);
             }
             battle.setField(sessionData.player, field);
-        } catch (InvalidFieldException | WrongBattleStatusException | ShipPlacementException e) {
+        } catch (InvalidFieldException e) {
+            sendErrorMessage(session, "InvalidFieldException");
+            return;
+        } catch (WrongBattleStatusException e) {
+            sendErrorMessage(session, "WrongBattleStatusException");
+            return;
+        } catch (ShipPlacementException e) {
+            sendErrorMessage(session, "ShipPlacementException");
             return;
         }
         BattleUpdateEvent battleUpdate = createBattleUpdateEvent(battle);
@@ -118,7 +126,11 @@ public class SocketHandler extends TextWebSocketHandler {
         Battle battle = sessionData.battle;
         try {
             battle.shoot(sessionData.player, shoot.target, shoot.x, shoot.y);
-        } catch (WrongBattleStatusException | WrongTargetException e) {
+        } catch (WrongBattleStatusException e) {
+            sendErrorMessage(session, "WrongBattleStatusException");
+            return;
+        } catch (WrongTargetException e) {
+            sendErrorMessage(session, "WrongTargetException");
             return;
         }
         BattleUpdateEvent battleUpdate = createBattleUpdateEvent(battle);
@@ -191,6 +203,13 @@ public class SocketHandler extends TextWebSocketHandler {
     private void send(WebSocketSession session, ShotEvent shot) throws IOException {
         ServerMessage serverMessage = new ServerMessage();
         serverMessage.shot = shot;
+        String payload = objectMapper.writeValueAsString(serverMessage);
+        session.sendMessage(new TextMessage(payload));
+    }
+
+    private void sendErrorMessage(WebSocketSession session, String errorMessage) throws IOException {
+        ServerMessage serverMessage = new ServerMessage();
+        serverMessage.error = errorMessage;
         String payload = objectMapper.writeValueAsString(serverMessage);
         session.sendMessage(new TextMessage(payload));
     }
