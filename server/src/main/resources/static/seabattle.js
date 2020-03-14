@@ -147,7 +147,7 @@ ui = {
     },
     start: function(callbacks) {
         this.placingField = new Field(0, 'field-placing');
-        this.placingShipsScreen.appendChild(this.placingField.element)
+        this.placingShipsScreen.appendChild(this.placingField.element);
 
         this.placingState.preview = new Ship(1, 'preview');
         this.placingState.preview.disableMouseEvents();
@@ -158,7 +158,7 @@ ui = {
         this.placingShipsExitButton.onclick = callbacks.exitPlacingShips;
         const self = this;
         this.resetFieldButton.onclick = function() {self._resetField()};
-        this.placeShipsButton.onclick = function() {callbacks.placeShips(self.placingState.fleet);};
+        this.placeShipsButton.onclick = function() {callbacks.placeShips(self.placingField.ships);};
         this.placingField.gridElement.oncontextmenu = function() {return false};
         this.placingField.gridElement.onmousemove = function(e) {
             const bounds = this.getBoundingClientRect();
@@ -235,10 +235,6 @@ ui = {
             };
             previousSize = shipSize;
             this.placingState.fleet.push({
-                x: null,
-                y: null,
-                vertical: null,
-                size: shipSize,
                 fleetShip: ship,
                 placedShip: null,
             });
@@ -253,13 +249,13 @@ ui = {
         else {
             const fleetItem = this.placingState.fleet[index];
             if (fleetItem.placedShip) {
-                this.placingState.grabVertical = fleetItem.vertical;
-                this.placingState.preview.setPosition(fleetItem.x, fleetItem.y);
+                this.placingState.grabVertical = fleetItem.placedShip.vertical;
+                this.placingState.preview.setPosition(fleetItem.placedShip.x, fleetItem.placedShip.y);
                 this._unplaceShip(index);
             }
             fleetItem.fleetShip.setSelected(true);
             this.placingState.preview.setVertical(this.placingState.grabVertical);
-            this.placingState.preview.setSize(fleetItem.size);
+            this.placingState.preview.setSize(fleetItem.fleetShip.size);
             this._validatePreview();
         }
     },
@@ -296,11 +292,8 @@ ui = {
     },
     _placeShip: function(shipIndex, x, y, vertical) {
         const fleetItem = this.placingState.fleet[shipIndex];
-        fleetItem.x = x;
-        fleetItem.y = y;
-        fleetItem.vertical = vertical;
         fleetItem.fleetShip.setPlaced(true);
-        fleetItem.placedShip = new Ship(fleetItem.size);
+        fleetItem.placedShip = new Ship(fleetItem.fleetShip.size);
         fleetItem.placedShip.setPosition(x, y);
         fleetItem.placedShip.setVertical(vertical);
         const self = this;
@@ -314,9 +307,6 @@ ui = {
     _unplaceShip: function(index) {
         const fleetItem = this.placingState.fleet[index];
         if (!fleetItem.placedShip) return;
-        fleetItem.x = null;
-        fleetItem.y = null;
-        fleetItem.vertical = null;
         fleetItem.fleetShip.setPlaced(false);
         this.placingField.removeShip(fleetItem.placedShip);
         fleetItem.placedShip = null;
