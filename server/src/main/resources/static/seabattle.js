@@ -121,6 +121,26 @@ function Field(size, styleClass) {
         this.ships.splice(index, 1);
         this.element.removeChild(ship.element);
     };
+    this.canFit = function(ship) {
+        const x = ship.x;
+        const y = ship.y;
+        if (x < 0) return false;
+        if (y < 0) return false;
+        const right = x + ship.getSizeX() - 1;
+        const bottom = y + ship.getSizeY() - 1;
+        if (right >= this.size) return false;
+        if (bottom >= this.size) return false;
+        for (let i = 0; i < this.ships.length; ++i) {
+            const placed = this.ships[i];
+            const placedX = placed.x - 1;
+            const placedY = placed.y - 1;
+            const placedRight = placed.x + placed.getSizeX();
+            const placedBottom = placed.y + placed.getSizeY();
+            if (x <= placedRight && y <= placedBottom && right >= placedX && bottom >= placedY)
+                return false;
+        }
+        return true;
+    };
     this.reset(size);
 }
 
@@ -347,30 +367,8 @@ ui = {
         this._validatePreview();
     },
     _validatePreview: function() {
-        const isValid = this._isValidShip(this.placingState.preview);
+        const isValid = this.placingField.canFit(this.placingState.preview);
         this.placingState.preview.setInvalid(!isValid);
-    },
-    _isValidShip: function(ship) {
-        const x = ship.x;
-        const y = ship.y;
-        if (x < 0) return false;
-        if (y < 0) return false;
-        const right = x + ship.getSizeX() - 1;
-        const bottom = y + ship.getSizeY() - 1;
-        if (right >= this.battle.fieldSize) return false;
-        if (bottom >= this.battle.fieldSize) return false;
-        for (let i = 0; i < this.placingState.fleet.length; ++i) {
-            const placed = this.placingState.fleet[i].placedShip;
-            if (placed == null)
-                continue;
-            const placedX = placed.x - 1;
-            const placedY = placed.y - 1;
-            const placedRight = placed.x + placed.getSizeX();
-            const placedBottom = placed.y + placed.getSizeY();
-            if (x <= placedRight && y <= placedBottom && right >= placedX && bottom >= placedY)
-                return false;
-        }
-        return true;
     },
 };
 
