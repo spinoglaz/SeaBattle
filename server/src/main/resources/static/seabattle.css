@@ -210,19 +210,24 @@ body {
     text-align: right;
 }
 
-.ship-container {
-    display: inline-block;
-    font-size: 0;
-    margin: 8px 8px;
-    padding: 8px 8px;
-    border-radius: 4px;
-}
-
 .ship {
     font-size: 0;
     display: inline-block;
     border-radius: 2px;
     box-shadow: 0 0 0 3px white;
+}
+
+.ship:hover, .ship.selected, .selected .ship {
+    box-shadow: 0 0 0 3px #c9ff3c;
+}
+
+.ship.preview {
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.5);
+    white-space: nowrap;
+}
+
+.fleet .ship {
+    margin: 16px 16px;
 }
 
 .ship-cell {
@@ -249,17 +254,8 @@ body {
     position: absolute;
 }
 
-.field .ship:hover, .field .ship.selected, .selected .ship {
-    box-shadow: 0 0 0 3px #c9ff3c;
-}
-
-.ship.preview {
-    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.5);
-    white-space: nowrap;
-}
-
 .field .ship-cell {
-    width: 35px;
+    width: 35px; /* Get rid of hard-code */
     height: 35px;
     border: none;
 }

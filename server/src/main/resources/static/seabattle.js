@@ -25,6 +25,7 @@ function Ship(size, styleClass) {
         this.element.oncontextmenu = function() {return false};
     };
     this.setPosition = function(x, y) {
+        // TODO remove hard-code
         this.element.style.left = (35 * x) + 'px';
         this.element.style.top = (35 * y) + 'px';
     };
@@ -42,6 +43,12 @@ function Ship(size, styleClass) {
             this._addCell();
         }
         this.size = size;
+    };
+    this.setPlaced = function(placed) {
+        if (placed)
+            this.element.classList.add('placed');
+        else
+            this.element.classList.remove('placed');
     };
     this.setVisible = function(visible) {
         this.element.style.visibility = visible ? 'visible' : 'hidden';
@@ -160,9 +167,9 @@ ui = {
             if (previousSize !== 0 && previousSize !== shipSize) {
                 this.placingFleet.appendChild(document.createElement('br'));
             }
-            let shipContainer = this._createShipContainer(shipSize);
-            this.placingFleet.appendChild(shipContainer);
-            shipContainer.onmousedown = function(e) {
+            const ship = new Ship(shipSize);
+            this.placingFleet.appendChild(ship.element);
+            ship.element.onmousedown = function(e) {
                 if (e.button === 0) {
                     ui._grabShip(i);
                 }
@@ -173,9 +180,8 @@ ui = {
                 y: null,
                 vertical: null,
                 size: shipSize,
-                element: shipContainer,
-                fieldElement: null,
-                placed: false,
+                element: ship.element,
+                placedShip: null,
             });
         }
     },
@@ -187,7 +193,7 @@ ui = {
         }
         else {
             const fleetItem = this.placingState.fleet[index];
-            if (fleetItem.placed) {
+            if (fleetItem.placedShip) {
                 this.placingState.grabVertical = fleetItem.vertical;
                 this.placingState.preview.setPosition(fleetItem.x, fleetItem.y);
                 this._unplaceShip(index);
@@ -221,7 +227,7 @@ ui = {
         const shipSizes = ui.battle.shipSizes;
         for (let i = 0; i < shipSizes.length; ++i) {
             const nextShipToPlace = (this.placingState.grabIndex + i) % shipSizes.length;
-            if (!this.placingState.fleet[nextShipToPlace].placed) {
+            if (!this.placingState.fleet[nextShipToPlace].placedShip) {
                 return nextShipToPlace;
             }
         }
@@ -232,28 +238,26 @@ ui = {
         fleetItem.x = x;
         fleetItem.y = y;
         fleetItem.vertical = vertical;
-        fleetItem.placed = true;
         fleetItem.element.classList.add('placed');
-        const ship = new Ship(fleetItem.size);
-        ship.setPosition(x, y);
-        ship.setVertical(vertical);
-        fleetItem.fieldElement = ship.element;
+        fleetItem.placedShip = new Ship(fleetItem.size);
+        fleetItem.placedShip.setPosition(x, y);
+        fleetItem.placedShip.setVertical(vertical);
         const self = this;
-        fleetItem.fieldElement.onmousedown = function(e) {
+        fleetItem.placedShip.element.onmousedown = function(e) {
             if (e.button === 0) {
                 self._grabShip(shipIndex);
             }
         };
-        this.placingField.appendChild(fleetItem.fieldElement);
+        this.placingField.appendChild(fleetItem.placedShip.element);
     },
     _unplaceShip: function(index) {
         const fleetItem = this.placingState.fleet[index];
         fleetItem.x = null;
         fleetItem.y = null;
         fleetItem.vertical = null;
-        fleetItem.placed = false;
         fleetItem.element.classList.remove('placed');
-        this.placingField.removeChild(fleetItem.fieldElement);
+        this.placingField.removeChild(fleetItem.placedShip.element);
+        fleetItem.placedShip = null;
         this.placingState.allPlaced = false;
         this.placeShipsButton.classList.remove('revealed');
         this.placingState.preview.show();
@@ -261,13 +265,6 @@ ui = {
     _clearFleet: function() {
         this.placingState.fleet = [];
         this.placingFleet.textContent = '';
-    },
-    _createShipContainer: function(shipSize) {
-        const shipContainer = document.createElement('div');
-        shipContainer.classList.add('ship-container');
-        const ship = new Ship(shipSize);
-        shipContainer.appendChild(ship.element);
-        return shipContainer;
     },
 };
 
