@@ -200,7 +200,9 @@ body {
 
 .field-cell {
     display: block;
-    border: 1px solid rgba(255, 255, 255, 0.4);
+    border-color: rgba(255, 255, 255, 0.4);
+    border-style: solid;
+    border-width: 0 1px 1px 0;
 }
 
 .left-cell-label {
@@ -227,7 +229,7 @@ body {
 }
 
 .ship.preview:not(.invalid) {
-    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.5);
+    box-shadow: 0 0 0 3px #94C6F1;
 }
 
 .ship.preview.invalid .ship-cell {
@@ -258,8 +260,25 @@ body {
 }
 
 .field .ship-cell {
-    width: 35px; /* Get rid of hard-code */
+    /* Get rid of hard-code */
+    width: 35px;
+    height: 34px;
+}
+
+.field .vertical .ship-cell {
+    /* Get rid of hard-code */
+    width: 34px;
     height: 35px;
+}
+
+.field .vertical .ship-cell:last-of-type {
+    /* Get rid of hard-code */
+    height: 34px;
+}
+
+.field .ship-cell:last-of-type {
+    /* Get rid of hard-code */
+    width: 34px;
 }
 
 .fleet .ship {
