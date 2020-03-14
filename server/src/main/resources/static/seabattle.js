@@ -131,6 +131,7 @@ function Fleet(shipSizes, styleClass) {
     if (styleClass)
         this.element.classList.add(styleClass);
     this.ships = [];
+    this.selected = null;
 
     this.reset = function(shipSizes) {
         this.ships = [];
@@ -149,7 +150,19 @@ function Fleet(shipSizes, styleClass) {
             previousSize = shipSize;
         }
     };
+    this.select = function(index) {
+        if (this.selected != null) {
+            this.ships[this.selected].setSelected(false);
+        }
+        this.selected = index;
+        if (this.selected == null) return null;
+
+        const ship = this.ships[index];
+        ship.setSelected(true);
+        return ship;
+    };
     this.reset(shipSizes);
+    this.select(null);
 }
 
 ui = {
@@ -259,13 +272,12 @@ ui = {
                 }
             };
             this.placingState.fleet.push({
-                fleetShip: ship,
                 placedShip: null,
             });
         }
     },
     _grabShip: function(index) {
-        this._ungrabShip(this.placingState.grabIndex);
+        const fleetShip = this.placingFleet.select(index);
         this.placingState.grabIndex = index;
         if (index == null) {
             this.placingState.preview.hide();
@@ -277,16 +289,10 @@ ui = {
                 this.placingState.preview.setPosition(fleetItem.placedShip.x, fleetItem.placedShip.y);
                 this._unplaceShip(index);
             }
-            fleetItem.fleetShip.setSelected(true);
             this.placingState.preview.setVertical(this.placingState.grabVertical);
-            this.placingState.preview.setSize(fleetItem.fleetShip.size);
+            this.placingState.preview.setSize(fleetShip.size);
             this._validatePreview();
         }
-    },
-    _ungrabShip: function(index) {
-        if (index == null)
-            return;
-        this.placingState.fleet[index].fleetShip.setSelected(false);
     },
     _placeCurrentShip: function() {
         if (this.placingState.grabIndex === null) return;
@@ -316,8 +322,9 @@ ui = {
     },
     _placeShip: function(shipIndex, x, y, vertical) {
         const fleetItem = this.placingState.fleet[shipIndex];
-        fleetItem.fleetShip.setPlaced(true);
-        fleetItem.placedShip = new Ship(fleetItem.fleetShip.size);
+        const fleetShip = this.placingFleet.ships[shipIndex];
+        fleetShip.setPlaced(true);
+        fleetItem.placedShip = new Ship(fleetShip.size);
         fleetItem.placedShip.setPosition(x, y);
         fleetItem.placedShip.setVertical(vertical);
         const self = this;
@@ -331,7 +338,7 @@ ui = {
     _unplaceShip: function(index) {
         const fleetItem = this.placingState.fleet[index];
         if (!fleetItem.placedShip) return;
-        fleetItem.fleetShip.setPlaced(false);
+        this.placingFleet.ships[index].setPlaced(false);
         this.placingField.removeShip(fleetItem.placedShip);
         fleetItem.placedShip = null;
         this.placingState.allPlaced = false;
