@@ -87,6 +87,43 @@ function Ship(size, styleClass) {
     this.disableContextMenu();
 }
 
+function Field(size, styleClass) {
+    this.size = 0;
+    this.element = document.createElement('div');
+    this.element.classList.add('field');
+    if (styleClass)
+        this.element.classList.add(styleClass);
+    this.gridElement = document.createElement('div');
+    this.gridElement.classList.add('field-grid');
+    this.element.appendChild(this.gridElement);
+    this.ships = [];
+
+    this.reset = function(size) {
+        this.size = size;
+        this.gridElement.textContent = '';
+        const cellCount = size * size;
+        for(let i = 0; i < cellCount; ++i) {
+            const cell = document.createElement('div');
+            cell.classList.add('field-cell');
+            this.gridElement.appendChild(cell);
+        }
+        for (let i = 0; i < this.ships.length; ++i) {
+            this.element.removeChild(this.ships[i].element);
+        }
+        this.ships = [];
+    };
+    this.addShip = function(ship) {
+        this.element.appendChild(ship.element);
+        this.ships.push(ship);
+    };
+    this.removeShip = function(ship) {
+        const index = this.ships.indexOf(ship);
+        this.ships.splice(index, 1);
+        this.element.removeChild(ship.element);
+    };
+    this.reset(size);
+}
+
 ui = {
     mainMenuScreen: document.getElementById('mainMenuScreen'),
     startBattleButton: document.getElementById('startBattle'),
@@ -94,7 +131,6 @@ ui = {
     placingShipsScreen: document.getElementById('placingShipsScreen'),
     placeShipsButton: document.getElementById('placeShips'),
     resetFieldButton: document.getElementById('resetField'),
-    placingField: document.querySelector('#placingShipsScreen .field'),
     placingGrid: document.querySelector('#placingShipsScreen .field-grid'),
     placingFleet: document.querySelector('#placingShipsScreen .fleet'),
     placingShipsExitButton: document.getElementById('placingShipsExit'),
@@ -110,18 +146,21 @@ ui = {
         preview: null,
     },
     start: function(callbacks) {
+        this.placingField = new Field(0, 'field-placing');
+        this.placingShipsScreen.appendChild(this.placingField.element)
+
         this.placingState.preview = new Ship(1, 'preview');
         this.placingState.preview.disableMouseEvents();
-        this.placingField.appendChild(this.placingState.preview.element);
         this.placingState.preview.hide();
+        this.placingField.element.appendChild(this.placingState.preview.element);
 
         this.startBattleButton.onclick = callbacks.startBattle;
         this.placingShipsExitButton.onclick = callbacks.exitPlacingShips;
         const self = this;
         this.resetFieldButton.onclick = function() {self._resetField()};
         this.placeShipsButton.onclick = function() {callbacks.placeShips(self.placingState.fleet);};
-        this.placingGrid.oncontextmenu = function() {return false};
-        this.placingGrid.onmousemove = function(e) {
+        this.placingField.gridElement.oncontextmenu = function() {return false};
+        this.placingField.gridElement.onmousemove = function(e) {
             const bounds = this.getBoundingClientRect();
             const pixelsX = e.pageX - bounds.left;
             const pixelsY = e.pageY - bounds.top;
@@ -135,10 +174,10 @@ ui = {
             }
             self._validatePreview();
         };
-        this.placingGrid.onmouseleave = function() {
+        this.placingField.gridElement.onmouseleave = function() {
             self.placingState.preview.hide();
         };
-        this.placingGrid.onmousedown = function(e) {
+        this.placingField.gridElement.onmousedown = function(e) {
             if (e.button === 0) {
                 self._placeCurrentShip();
             }
@@ -159,12 +198,11 @@ ui = {
         ui.battleScreen.classList.add('active');
     },
     joinBattle: function(battle) {
-        // TODO remove placed ships from previous session
         this.battle = battle;
         this.hideLoader();
         this.placeShipsButton.classList.remove('revealed');
         this.placingShipsScreen.classList.add('active');
-        this._setFieldSize(battle.fieldSize);
+        this.placingField.reset(battle.fieldSize);
         this._setFleet(battle.shipSizes);
         this._grabShip(0);
     },
@@ -179,15 +217,6 @@ ui = {
         this.placingState.grabVertical = !this.placingState.grabVertical;
         this.placingState.preview.setVertical(this.placingState.grabVertical);
         this._validatePreview();
-    },
-    _setFieldSize: function(fieldSize) {
-        this.placingGrid.textContent = '';
-        let cellCount = fieldSize * fieldSize;
-        for(let i = 0; i < cellCount; ++i) {
-            let cell = document.createElement('div');
-            cell.classList.add('field-cell');
-            this.placingGrid.appendChild(cell);
-        }
     },
     _setFleet: function(shipSizes) {
         this._clearFleet();
@@ -280,7 +309,7 @@ ui = {
                 self._grabShip(shipIndex);
             }
         };
-        this.placingField.appendChild(fleetItem.placedShip.element);
+        this.placingField.addShip(fleetItem.placedShip);
     },
     _unplaceShip: function(index) {
         const fleetItem = this.placingState.fleet[index];
@@ -289,7 +318,7 @@ ui = {
         fleetItem.y = null;
         fleetItem.vertical = null;
         fleetItem.fleetShip.setPlaced(false);
-        this.placingField.removeChild(fleetItem.placedShip.element);
+        this.placingField.removeShip(fleetItem.placedShip);
         fleetItem.placedShip = null;
         this.placingState.allPlaced = false;
         this.placeShipsButton.classList.remove('revealed');
