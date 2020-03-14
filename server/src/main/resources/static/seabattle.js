@@ -50,6 +50,12 @@ function Ship(size, styleClass) {
         else
             this.element.classList.remove('placed');
     };
+    this.setSelected = function(selected) {
+        if (selected)
+            this.element.classList.add('selected');
+        else
+            this.element.classList.remove('selected');
+    };
     this.setVisible = function(visible) {
         this.element.style.visibility = visible ? 'visible' : 'hidden';
     };
@@ -180,7 +186,7 @@ ui = {
                 y: null,
                 vertical: null,
                 size: shipSize,
-                element: ship.element,
+                fleetShip: ship,
                 placedShip: null,
             });
         }
@@ -198,7 +204,7 @@ ui = {
                 this.placingState.preview.setPosition(fleetItem.x, fleetItem.y);
                 this._unplaceShip(index);
             }
-            fleetItem.element.classList.add('selected');
+            fleetItem.fleetShip.setSelected(true);
             this.placingState.preview.setVertical(this.placingState.grabVertical);
             this.placingState.preview.setSize(fleetItem.size);
         }
@@ -206,7 +212,7 @@ ui = {
     _ungrabShip: function(index) {
         if (index == null)
             return;
-        this.placingState.fleet[index].element.classList.remove('selected');
+        this.placingState.fleet[index].fleetShip.setSelected(false);
     },
     _placeCurrentShip: function(x, y) {
         if (this.placingState.grabIndex === null) {
@@ -238,7 +244,7 @@ ui = {
         fleetItem.x = x;
         fleetItem.y = y;
         fleetItem.vertical = vertical;
-        fleetItem.element.classList.add('placed');
+        fleetItem.fleetShip.setPlaced(true);
         fleetItem.placedShip = new Ship(fleetItem.size);
         fleetItem.placedShip.setPosition(x, y);
         fleetItem.placedShip.setVertical(vertical);
@@ -255,7 +261,7 @@ ui = {
         fleetItem.x = null;
         fleetItem.y = null;
         fleetItem.vertical = null;
-        fleetItem.element.classList.remove('placed');
+        fleetItem.fleetShip.setPlaced(false);
         this.placingField.removeChild(fleetItem.placedShip.element);
         fleetItem.placedShip = null;
         this.placingState.allPlaced = false;
