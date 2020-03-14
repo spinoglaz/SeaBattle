@@ -159,6 +159,7 @@ public class SocketHandler extends TextWebSocketHandler {
                 break;
         }
         List<WebSocketSession> sessions = battleSessions.get(battle);
+        battleUpdate.players = new PlayerStatusDTO[battle.getPlayerCount()];
         for (int i = 0; i < battle.getPlayerCount(); i++) {
             if (sessions.get(i) == null) {
                 battleUpdate.players[i] = PlayerStatusDTO.NO_PLAYER;
