@@ -204,6 +204,132 @@ function Fleet(shipSizes, styleClass) {
     this.select(null);
 }
 
+function Placer(field, fleet, callbacks) {
+    const self = this;
+    this.field = field;
+    this.fleet = fleet;
+    this.grabIndex = 0;
+    this.grabVertical = false;
+    this.grabOffset = 0;  // TODO Implement it
+    this.placedShips = [];
+    this.allPlaced = false;
+
+    this.preview = new Ship(1, 'preview');
+    this.preview.disableMouseEvents();
+    this.preview.hide();
+    this.field.element.appendChild(this.preview.element);
+
+    this.field.onMouseMove = function(x, y) {self._onGridMouseMove(x, y)};
+    this.field.gridElement.onmouseleave = function() {
+        self.preview.hide();
+    };
+    this.field.gridElement.onmousedown = function(e) {
+        if (e.button === 0) {
+            self._placeCurrentShip();
+        }
+        if (e.button === 2) {
+            self._toggleVertical();
+        }
+    };
+
+    this.reset = function(battle) {
+        this.field.reset(battle.fieldSize);
+        this.fleet.reset(battle.shipSizes);
+        this.placedShips = [];
+        for (let i = 0; i < this.fleet.size; ++i) {
+            this.placedShips[i] = null;
+            const ship = fleet.ships[i];
+            ship.element.onmousedown = function(e) {
+                if (e.button === 0) {
+                    self._grabShip(i);
+                }
+            };
+            this.placedShips.push(null);
+        }
+        this._grabShip(0);
+        this.preview.hide();
+    };
+    this._onGridMouseMove = function(x, y) {
+        if (!this.allPlaced) {
+            this.preview.setPosition(x, y);
+            this.preview.show();
+        }
+        this._validatePreview();
+    };
+    this._toggleVertical = function() {
+        this.grabVertical = !this.grabVertical;
+        this.preview.setVertical(this.grabVertical);
+        this._validatePreview();
+    };
+    this._grabShip = function(index) {
+        const fleetShip = this.fleet.select(index);
+        this.grabIndex = index;
+        if (index == null) {
+            this.preview.hide();
+        }
+        else {
+            const placedShip = this.placedShips[index];
+            if (placedShip) {
+                this.grabVertical = placedShip.vertical;
+                this.preview.setPosition(placedShip.x, placedShip.y);
+                this._unplaceShip(index);
+            }
+            this.preview.setVertical(this.grabVertical);
+            this.preview.setSize(fleetShip.size);
+            this._validatePreview();
+        }
+    };
+    this._placeCurrentShip = function() {
+        if (this.grabIndex === null) return;
+        if (this.preview.invalid) return;
+        const x = this.preview.x;
+        const y = this.preview.y;
+        this._placeShip(this.grabIndex, x, y, this.grabVertical);
+        const nextShipToPlace = this._decideNextShipToPlace();
+        this._grabShip(nextShipToPlace);
+        this.allPlaced = nextShipToPlace === null;
+        callbacks.allPlaced(this.allPlaced);
+    };
+    this._decideNextShipToPlace = function() {
+        for (let i = 0; i < this.fleet.size; ++i) {
+            const nextShipToPlace = (this.grabIndex + i) % this.fleet.size;
+            if (!this.placedShips[nextShipToPlace]) {
+                return nextShipToPlace;
+            }
+        }
+        return null;
+    };
+    this._placeShip = function(shipIndex, x, y, vertical) {
+        const fleetShip = this.fleet.ships[shipIndex];
+        fleetShip.setPlaced(true);
+        const placedShip = new Ship(fleetShip.size);
+        this.placedShips[shipIndex] = placedShip;
+        placedShip.setPosition(x, y);
+        placedShip.setVertical(vertical);
+        const self = this;
+        placedShip.element.onmousedown = function(e) {
+            if (e.button === 0) {
+                self._grabShip(shipIndex);
+            }
+        };
+        this.field.addShip(placedShip);
+    };
+    this._unplaceShip = function(index) {
+        const placedShip = this.placer.placedShips[index];
+        if (!placedShip) return;
+        this.fleet.ships[index].setPlaced(false);
+        this.field.removeShip(placedShip);
+        this.placedShips[index] = null;
+        callbacks.allPlaced(false);
+        this.preview.show();
+        this._validatePreview();
+    };
+    this._validatePreview = function() {
+        const isValid = this.field.canFit(this.preview);
+        this.preview.setInvalid(!isValid);
+    };
+}
+
 ui = {
     mainMenuScreen: document.getElementById('mainMenuScreen'),
     startBattleButton: document.getElementById('startBattle'),
@@ -216,14 +342,6 @@ ui = {
     loader: document.getElementById('loader'),
     loaderText: document.getElementById('loaderText'),
     battleScreen: document.getElementById('battleScreen'),
-    placingState: {
-        grabIndex: 0,
-        grabVertical: false,
-        grabOffset: 0,  // TODO Implement it
-        placedShips: [],
-        allPlaced: false,
-        preview: null,
-    },
     start: function(callbacks) {
         const self = this;
         this.placingField = new Field(0, 'field-placing');
@@ -232,27 +350,21 @@ ui = {
         this.placingFleet = new Fleet([], 'fleet-placing');
         this.placingShipsScreen.appendChild(this.placingFleet.element);
 
-        this.placingState.preview = new Ship(1, 'preview');
-        this.placingState.preview.disableMouseEvents();
-        this.placingState.preview.hide();
-        this.placingField.element.appendChild(this.placingState.preview.element);
+        this.placer = new Placer(this.placingField, this.placingFleet, {
+            allPlaced: function(allPlaced) {
+                if (this.allPlaced) {
+                    self.placeShipsButton.classList.add('revealed');
+                }
+                else {
+                    self.placeShipsButton.classList.remove('revealed');
+                }
+            },
+        });
 
         this.startBattleButton.onclick = callbacks.startBattle;
         this.placingShipsExitButton.onclick = callbacks.exitPlacingShips;
-        this.resetFieldButton.onclick = function() {self._resetField()};
+        this.resetFieldButton.onclick = function() {self.placer.reset(self.battle)};
         this.placeShipsButton.onclick = function() {callbacks.placeShips(self.placingField.ships);};
-        this.placingField.onMouseMove = function(x, y) {self._onGridMouseMove(x, y)};
-        this.placingField.gridElement.onmouseleave = function() {
-            self.placingState.preview.hide();
-        };
-        this.placingField.gridElement.onmousedown = function(e) {
-            if (e.button === 0) {
-                self._placeCurrentShip();
-            }
-            if (e.button === 2) {
-                self._toggleVertical();
-            }
-        }
     },
     showLoader: function(text) {
         ui.loader.classList.add('active');
@@ -270,119 +382,9 @@ ui = {
         this.hideLoader();
         this.placeShipsButton.classList.remove('revealed');
         this.placingShipsScreen.classList.add('active');
-        this.placingField.reset(battle.fieldSize);
-        this.placingFleet.reset(battle.shipSizes);
-        this._setFleet(this.placingFleet);
-        this._grabShip(0);
-    },
-    _onGridMouseMove: function(x, y) {
-        if (!this.placingState.allPlaced) {
-            this.placingState.preview.setPosition(x, y);
-            this.placingState.preview.show();
-        }
-        this._validatePreview();
-    },
-    _resetField: function() {
-        for (let i = 0; i < this.placingState.placedShips.length; ++i) {
-            this._unplaceShip(i);
-        }
-        this._grabShip(0);
-        this.placingState.preview.hide();
-    },
-    _toggleVertical: function() {
-        this.placingState.grabVertical = !this.placingState.grabVertical;
-        this.placingState.preview.setVertical(this.placingState.grabVertical);
-        this._validatePreview();
-    },
-    _setFleet: function(fleet) {
-        this.placingState.placedShips = [];
-        for (let i = 0; i < fleet.size; ++i) {
-            const ship = fleet.ships[i];
-            ship.element.onmousedown = function(e) {
-                if (e.button === 0) {
-                    ui._grabShip(i);
-                }
-            };
-            this.placingState.placedShips.push(null);
-        }
-    },
-    _grabShip: function(index) {
-        const fleetShip = this.placingFleet.select(index);
-        this.placingState.grabIndex = index;
-        if (index == null) {
-            this.placingState.preview.hide();
-        }
-        else {
-            const placedShip = this.placingState.placedShips[index];
-            if (placedShip) {
-                this.placingState.grabVertical = placedShip.vertical;
-                this.placingState.preview.setPosition(placedShip.x, placedShip.y);
-                this._unplaceShip(index);
-            }
-            this.placingState.preview.setVertical(this.placingState.grabVertical);
-            this.placingState.preview.setSize(fleetShip.size);
-            this._validatePreview();
-        }
-    },
-    _placeCurrentShip: function() {
-        if (this.placingState.grabIndex === null) return;
-        if (this.placingState.preview.invalid) return;
-        const x = this.placingState.preview.x;
-        const y = this.placingState.preview.y;
-        this._placeShip(this.placingState.grabIndex, x, y, this.placingState.grabVertical);
-        const nextShipToPlace = this._decideNextShipToPlace();
-        this._grabShip(nextShipToPlace);
-        this.placingState.allPlaced = nextShipToPlace === null;
-        if (this.placingState.allPlaced) {
-            this.placeShipsButton.classList.add('revealed');
-        }
-        else {
-            this.placeShipsButton.classList.remove('revealed');
-        }
-    },
-    _decideNextShipToPlace: function() {
-        const shipSizes = ui.battle.shipSizes;
-        for (let i = 0; i < shipSizes.length; ++i) {
-            const nextShipToPlace = (this.placingState.grabIndex + i) % shipSizes.length;
-            if (!this.placingState.placedShips[nextShipToPlace]) {
-                return nextShipToPlace;
-            }
-        }
-        return null;
-    },
-    _placeShip: function(shipIndex, x, y, vertical) {
-        const fleetShip = this.placingFleet.ships[shipIndex];
-        fleetShip.setPlaced(true);
-        const placedShip = new Ship(fleetShip.size);
-        this.placingState.placedShips[shipIndex] = placedShip;
-        placedShip.setPosition(x, y);
-        placedShip.setVertical(vertical);
-        const self = this;
-        placedShip.element.onmousedown = function(e) {
-            if (e.button === 0) {
-                self._grabShip(shipIndex);
-            }
-        };
-        this.placingField.addShip(placedShip);
-    },
-    _unplaceShip: function(index) {
-        const placedShip = this.placingState.placedShips[index];
-        if (!placedShip) return;
-        this.placingFleet.ships[index].setPlaced(false);
-        this.placingField.removeShip(placedShip);
-        this.placingState.placedShips[index] = null;
-        this.placingState.allPlaced = false;
-        this.placeShipsButton.classList.remove('revealed');
-        this.placingState.preview.show();
-        this._validatePreview();
-    },
-    _validatePreview: function() {
-        const isValid = this.placingField.canFit(this.placingState.preview);
-        this.placingState.preview.setInvalid(!isValid);
+        this.placer.reset(battle);
     },
 };
-
-// TODO extract placer from ui
 
 server = {
     connect: function(callbacks) {
