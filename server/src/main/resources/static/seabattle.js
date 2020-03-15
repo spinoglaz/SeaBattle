@@ -33,6 +33,7 @@ function Ship(size, styleClass) {
             this._addCell();
         }
         this.size = size;
+        this._updateStyle();
     };
     this.getSizeX = function() {
         return this.vertical ? 1 : this.size;
@@ -265,8 +266,8 @@ function Placer(callbacks) {
         if (!this.allPlaced) {
             this.preview.setPosition(x, y);
             this.preview.show();
+            this._validatePreview();
         }
-        this._validatePreview();
     };
     this._toggleVertical = function() {
         this.grabVertical = !this.grabVertical;
@@ -299,8 +300,7 @@ function Placer(callbacks) {
         this._placeShip(this.grabIndex, x, y, this.grabVertical);
         const nextShipToPlace = this._decideNextShipToPlace();
         this._grabShip(nextShipToPlace);
-        this.allPlaced = nextShipToPlace === null;
-        callbacks.allPlaced(this.allPlaced);
+        this._setAllPlaced(nextShipToPlace === null);
     };
     this._decideNextShipToPlace = function() {
         for (let i = 0; i < this.fleet.size; ++i) {
@@ -332,13 +332,17 @@ function Placer(callbacks) {
         this.fleet.ships[index].setPlaced(false);
         this.field.removeShip(placedShip);
         this.placedShips[index] = null;
-        callbacks.allPlaced(false);
+        this._setAllPlaced(false);
         this.preview.show();
         this._validatePreview();
     };
     this._validatePreview = function() {
         const isValid = this.field.canFit(this.preview);
         this.preview.setInvalid(!isValid);
+    };
+    this._setAllPlaced = function(allPlaced) {
+        this.allPlaced = allPlaced;
+        callbacks.allPlaced(allPlaced);
     };
 }
 
