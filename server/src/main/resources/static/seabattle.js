@@ -388,7 +388,7 @@ ui = {
 
         this.placer = new Placer({
             allPlaced: function(allPlaced) {
-                if (this.allPlaced) {
+                if (allPlaced) {
                     self.placeShipsButton.classList.add('revealed');
                 }
                 else {
