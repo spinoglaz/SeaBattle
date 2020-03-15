@@ -204,10 +204,10 @@ function Fleet(shipSizes, styleClass) {
     this.select(null);
 }
 
-function Placer(field, fleet, callbacks) {
+function Placer(callbacks) {
     const self = this;
-    this.field = field;
-    this.fleet = fleet;
+    this.field = new Field(0, 'field-placing');
+    this.fleet = new Fleet([], 'fleet-placing');
     this.grabIndex = 0;
     this.grabVertical = false;
     this.grabOffset = 0;  // TODO Implement it
@@ -237,8 +237,7 @@ function Placer(field, fleet, callbacks) {
         this.fleet.reset(battle.shipSizes);
         this.placedShips = [];
         for (let i = 0; i < this.fleet.size; ++i) {
-            this.placedShips[i] = null;
-            const ship = fleet.ships[i];
+            const ship = this.fleet.ships[i];
             ship.element.onmousedown = function(e) {
                 if (e.button === 0) {
                     self._grabShip(i);
@@ -342,15 +341,11 @@ ui = {
     loader: document.getElementById('loader'),
     loaderText: document.getElementById('loaderText'),
     battleScreen: document.getElementById('battleScreen'),
+    battle: null,
     start: function(callbacks) {
         const self = this;
-        this.placingField = new Field(0, 'field-placing');
-        this.placingShipsScreen.appendChild(this.placingField.element);
 
-        this.placingFleet = new Fleet([], 'fleet-placing');
-        this.placingShipsScreen.appendChild(this.placingFleet.element);
-
-        this.placer = new Placer(this.placingField, this.placingFleet, {
+        this.placer = new Placer({
             allPlaced: function(allPlaced) {
                 if (this.allPlaced) {
                     self.placeShipsButton.classList.add('revealed');
@@ -361,10 +356,12 @@ ui = {
             },
         });
 
+        this.placingShipsScreen.appendChild(this.placer.field.element);
+        this.placingShipsScreen.appendChild(this.placer.fleet.element);
         this.startBattleButton.onclick = callbacks.startBattle;
         this.placingShipsExitButton.onclick = callbacks.exitPlacingShips;
         this.resetFieldButton.onclick = function() {self.placer.reset(self.battle)};
-        this.placeShipsButton.onclick = function() {callbacks.placeShips(self.placingField.ships);};
+        this.placeShipsButton.onclick = function() {callbacks.placeShips(self.placer.placedShips);};
     },
     showLoader: function(text) {
         ui.loader.classList.add('active');
