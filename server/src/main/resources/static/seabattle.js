@@ -342,6 +342,33 @@ function Placer(callbacks) {
     };
 }
 
+function BattleController() {
+    this.fields = [
+        new Field(0, 'field-1'),
+        new Field(0, 'field-2'),
+    ];
+    this.fleets = [
+        new Fleet([], 'fleet-1'),
+        new Fleet([], 'fleet-2'),
+    ];
+
+    this.reset = function(battle, player) {
+        this.battle = battle;
+        this.player = player;
+        for (let i = 0; i < this.fields.length; ++i) {
+            this.fields[i].reset(battle.fieldSize);
+            this.fleets[i].reset(battle.shipSizes);
+        }
+    };
+    this.setPlayerShips = function(ships) {
+        for (let i = 0; i < ships.length; ++i) {
+            const playerShip = ships[i];
+            const ship = new Ship(playerShip.size);
+            this.fields[0].addShip(ship);
+        }
+    };
+}
+
 ui = {
     mainMenuScreen: document.getElementById('mainMenuScreen'),
     startBattleButton: document.getElementById('startBattle'),
@@ -357,6 +384,7 @@ ui = {
     battle: null,
     start: function(callbacks) {
         const self = this;
+        this.callbacks = callbacks;
 
         this.placer = new Placer({
             allPlaced: function(allPlaced) {
@@ -368,13 +396,19 @@ ui = {
                 }
             },
         });
-
         this.placingShipsScreen.appendChild(this.placer.field.element);
         this.placingShipsScreen.appendChild(this.placer.fleet.element);
+
+        this.battleController = new BattleController();
+        this.battleScreen.appendChild(this.battleController.fields[0].element);
+        this.battleScreen.appendChild(this.battleController.fields[1].element);
+        this.battleScreen.appendChild(this.battleController.fleets[0].element);
+        this.battleScreen.appendChild(this.battleController.fleets[1].element);
+
         this.startBattleButton.onclick = callbacks.startBattle;
         this.placingShipsExitButton.onclick = callbacks.exitPlacingShips;
         this.resetFieldButton.onclick = function() {self.placer.reset(self.battle)};
-        this.placeShipsButton.onclick = function() {callbacks.placeShips(self.placer.placedShips);};
+        this.placeShipsButton.onclick = function() {self._placeShips()};
     },
     showLoader: function(text) {
         ui.loader.classList.add('active');
@@ -387,12 +421,18 @@ ui = {
         ui.placingShipsScreen.classList.remove('active');
         ui.battleScreen.classList.add('active');
     },
-    joinBattle: function(battle) {
+    joinBattle: function(battle, player) {
         this.battle = battle;
         this.hideLoader();
         this.placeShipsButton.classList.remove('revealed');
         this.placingShipsScreen.classList.add('active');
         this.placer.reset(battle);
+        this.battleController.reset(battle, player);
+    },
+    _placeShips: function() {
+        this.callbacks.placeShips(this.placer.placedShips);
+        this.showBattle();
+        this.battleController.setPlayerShips(this.placer.placedShips);
     },
 };
 
@@ -452,13 +492,12 @@ game = {
         ui.mainMenuScreen.classList.add('active');
     },
     onJoinedToBattle: function(joinedBattleEvent) {
-        this.player = joinedBattleEvent.player;
-        this.battle = {
+        const battle = {
             playerCount: joinedBattleEvent.playerCount,
             fieldSize: joinedBattleEvent.fieldSize,
             shipSizes: joinedBattleEvent.shipSizes.sort(),
         };
-        ui.joinBattle(this.battle);
+        ui.joinBattle(battle, joinedBattleEvent.player);
     },
     onBattleUpdate: function() {
 
@@ -489,7 +528,6 @@ game = {
             });
         }
         server.placeShips(commandShips);
-        ui.showBattle();
     },
 };
 

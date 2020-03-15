@@ -169,9 +169,32 @@ body {
 
 .fleet-placing {
     position: absolute;
-    width: 350px;
     top: 25%;
     right: 14%;
+}
+
+.field-1 {
+    position: absolute;
+    top: 25%;
+    left: 14%;
+}
+
+.field-2 {
+    position: absolute;
+    top: 25%;
+    right: 14%;
+}
+
+.fleet-1 {
+    position: absolute;
+    top: 25%;
+    left: -20%;
+}
+
+.fleet-2 {
+    position: absolute;
+    top: 25%;
+    right: 120%;
 }
 
 .field-grid {
