@@ -186,7 +186,7 @@ body {
 .fleet-2 {
     position: absolute;
     top: 25%;
-    right: 120%;
+    right: -20%;
 }
 
 .field-grid {

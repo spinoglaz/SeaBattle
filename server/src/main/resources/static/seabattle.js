@@ -368,6 +368,7 @@ function BattleController() {
         for (let i = 0; i < ships.length; ++i) {
             const playerShip = ships[i];
             const ship = new Ship(playerShip.size);
+            ship.setPosition(playerShip.x, playerShip.y);
             this.fields[0].addShip(ship);
         }
     };
