@@ -4,7 +4,7 @@ body {
 
 #container {
     width: 1024px;
-    height: 768px;
+    height: 600px;
     position: absolute;
     top: 50%;
     left: 50%;
@@ -163,20 +163,20 @@ body {
 
 .field-placing {
     position: absolute;
-    top: 30%;
-    left: 10%;
+    top: 25%;
+    left: 14%;
 }
 
 .fleet-placing {
     position: absolute;
     width: 350px;
-    top: 30%;
-    right: 10%;
+    top: 25%;
+    right: 14%;
 }
 
 .field-grid {
-    width: 350px;
-    height: 350px;
+    width: 300px;
+    height: 300px;
 
     background-color: #288ce3;
 
@@ -241,7 +241,6 @@ body {
     width: 28px;
     height: 28px;
     color: white;
-    background-color: rgba(255, 255, 255, 0.2);
 }
 
 .ship.vertical .ship-cell {
@@ -257,28 +256,7 @@ body {
 
 .field .ship {
     position: absolute;
-}
-
-.field .ship-cell {
-    /* Get rid of hard-code */
-    width: 35px;
-    height: 34px;
-}
-
-.field .vertical .ship-cell {
-    /* Get rid of hard-code */
-    width: 34px;
-    height: 35px;
-}
-
-.field .vertical .ship-cell:last-of-type {
-    /* Get rid of hard-code */
-    height: 34px;
-}
-
-.field .ship-cell:last-of-type {
-    /* Get rid of hard-code */
-    width: 34px;
+    background-color: rgba(255, 255, 255, 0.2);
 }
 
 .fleet .ship {
@@ -287,6 +265,7 @@ body {
 
 .fleet .ship-cell {
     border: 1px solid rgba(255, 255, 255, 0.4);
+    background-color: rgba(255, 255, 255, 0.2);
 }
 
 .revealable {

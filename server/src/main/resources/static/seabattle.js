@@ -25,20 +25,6 @@ function Ship(size, styleClass) {
     this.disableContextMenu = function() {
         this.element.oncontextmenu = function() {return false};
     };
-    this.setPosition = function(x, y) {
-        this.x = x;
-        this.y = y;
-        // TODO remove hard-code
-        this.element.style.left = (35 * x) + 'px';
-        this.element.style.top = (35 * y) + 'px';
-    };
-    this.setVertical = function(vertical) {
-        this.vertical = vertical;
-        if (vertical)
-            this.element.classList.add('vertical');
-        else
-            this.element.classList.remove('vertical');
-    };
     this.setSize = function(size) {
         for(let i = size; i < this.size; ++i) {
             this.element.removeChild(this.cells.pop());
@@ -82,6 +68,30 @@ function Ship(size, styleClass) {
     this.show = function() {
         this.setVisible(true);
     };
+    // Following methods are for field ships only
+    this.setCellSize = function(cellSize) {
+        this.cellSize = cellSize;
+        this._updateStyle();
+    };
+    this.setPosition = function(x, y) {
+        this.x = x;
+        this.y = y;
+        this._updateStyle();
+    };
+    this.setVertical = function(vertical) {
+        this.vertical = vertical;
+        if (vertical)
+            this.element.classList.add('vertical');
+        else
+            this.element.classList.remove('vertical');
+        this._updateStyle();
+    };
+    this._updateStyle = function() {
+        this.element.style.left = (this.cellSize * this.x) + 'px';
+        this.element.style.top = (this.cellSize * this.y) + 'px';
+        this.element.style.width = (this.getSizeX() * this.cellSize - 1) + 'px';
+        this.element.style.height = (this.getSizeY() * this.cellSize - 1) + 'px';
+    };
 
     this.setSize(size);
     this.disableContextMenu();
@@ -120,6 +130,8 @@ function Field(size, styleClass) {
         this.ships = [];
     };
     this.addShip = function(ship) {
+        const cellSize = this.gridElement.offsetWidth / this.size;
+        ship.setCellSize(cellSize);
         this.element.appendChild(ship.element);
         this.ships.push(ship);
     };
@@ -247,6 +259,7 @@ function Placer(callbacks) {
         }
         this._grabShip(0);
         this.preview.hide();
+        this.preview.setCellSize(this.field.gridElement.offsetWidth / this.field.size);
     };
     this._onGridMouseMove = function(x, y) {
         if (!this.allPlaced) {
@@ -314,7 +327,7 @@ function Placer(callbacks) {
         this.field.addShip(placedShip);
     };
     this._unplaceShip = function(index) {
-        const placedShip = this.placer.placedShips[index];
+        const placedShip = this.placedShips[index];
         if (!placedShip) return;
         this.fleet.ships[index].setPlaced(false);
         this.field.removeShip(placedShip);
