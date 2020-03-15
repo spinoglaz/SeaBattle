@@ -6,4 +6,5 @@ public class ShotEvent {
     public int y;
     public int player;
     public int target;
+    public ShootResultDTO result;
 }

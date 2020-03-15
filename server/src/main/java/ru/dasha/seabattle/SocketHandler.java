@@ -126,8 +126,9 @@ public class SocketHandler extends TextWebSocketHandler {
     private void shoot(WebSocketSession session, ShootCommand shoot) throws IOException {
         SessionData sessionData = sessions.get(session);
         Battle battle = sessionData.battle;
+        ShootResult shootResult;
         try {
-            battle.shoot(sessionData.player, shoot.target, shoot.x, shoot.y);
+            shootResult = battle.shoot(sessionData.player, shoot.target, shoot.x, shoot.y);
         } catch (WrongBattleStatusException e) {
             sendErrorMessage(session, "WrongBattleStatusException");
             return;
@@ -141,6 +142,20 @@ public class SocketHandler extends TextWebSocketHandler {
         shotEvent.y = shoot.y;
         shotEvent.player = sessionData.player;
         shotEvent.target = shoot.target;
+        switch (shootResult) {
+            case MISS:
+                shotEvent.result = ShootResultDTO.MISS;
+                break;
+            case HIT:
+                shotEvent.result = ShootResultDTO.HIT;
+                break;
+            case KILL:
+                shotEvent.result = ShootResultDTO.KILL;
+                break;
+            case KILL_ALL:
+                shotEvent.result = ShootResultDTO.KILL_ALL;
+                break;
+        }
         for (WebSocketSession battleSession: battleSessions.get(battle)) {
             send(battleSession, shotEvent);
             send(battleSession, battleUpdate);
