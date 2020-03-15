@@ -366,13 +366,15 @@ function Placer(callbacks) {
 
 function BattleController(callbacks) {
     const self = this;
+    this.battleStatusElement = document.createElement('span');
+    this.battleStatusElement.classList.add('title-2');
     this.fields = [
-        new Field(0, 'field-1'),
-        new Field(0, 'field-2'),
+        new Field(0),
+        new Field(0),
     ];
     this.fleets = [
-        new Fleet([], 'fleet-1'),
-        new Fleet([], 'fleet-2'),
+        new Fleet([]),
+        new Fleet([]),
     ];
 
     this.reset = function(battle, player) {
@@ -395,6 +397,7 @@ function BattleController(callbacks) {
         this.fields[this.enemy].onMouseDown = function (e, x, y) {
             callbacks.shoot(self.enemy, x, y);
         };
+        this._setBattleStatusText('Waiting for opponent...');
     };
     this.setPlayerShips = function(ships) {
         for (let i = 0; i < ships.length; ++i) {
@@ -402,6 +405,32 @@ function BattleController(callbacks) {
             this.fields[this.player].addShip(ship);
         }
     };
+    this._setBattleStatusText = function(text, animate) {
+        this.battleStatusElement.textContent = text;
+        if (animate)
+            this.battleStatusElement.classList.add('active');
+        else
+            this.battleStatusElement.classList.remove('active');
+    };
+    this.setBattleState = function(battleState) {
+        const status = battleState.players[this.player];
+        const enemyStatus = battleState.players[this.enemy];
+        if (status === 'WAITING') {
+            this._setBattleStatusText('Wait for opponent');
+        }
+        else if (status === 'SHOOTING') {
+            this._setBattleStatusText('Your turn', true);
+        }
+        else if (status === 'WINNER') {
+            this._setBattleStatusText('You win!');
+        }
+        else if (status === 'LOSER') {
+            this._setBattleStatusText('You lose!');
+        }
+        if (enemyStatus === 'NO_PLAYER') {
+            // TODO show that no enemy player
+        }
+    }
 }
 
 ui = {
@@ -437,6 +466,7 @@ ui = {
         this.battleController = new BattleController({
             shoot: callbacks.shoot,
         });
+        this.battleScreen.appendChild(this.battleController.battleStatusElement);
         this.battleScreen.appendChild(this.battleController.fields[0].element);
         this.battleScreen.appendChild(this.battleController.fields[1].element);
         this.battleScreen.appendChild(this.battleController.fleets[0].element);
@@ -465,6 +495,9 @@ ui = {
         this.placingShipsScreen.classList.add('active');
         this.placer.reset(battle);
         this.battleController.reset(battle, player);
+    },
+    setBattleState: function(battleState) {
+        this.battleController.setBattleState(battleState);
     },
     _placeShips: function() {
         this.callbacks.placeShips(this.placer.placedShips);
@@ -538,10 +571,10 @@ game = {
         ui.joinBattle(battle, joinedBattleEvent.player);
         ui.leaveBattleButton.classList.add('revealed');
     },
-    onBattleUpdate: function() {
-
+    onBattleUpdate: function(event) {
+        ui.setBattleState(event);
     },
-    onShot: function() {
+    onShot: function(event) {
 
     },
     // UI events

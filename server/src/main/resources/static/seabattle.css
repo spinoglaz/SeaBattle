@@ -137,6 +137,18 @@ body {
     letter-spacing: 4px;
 }
 
+.title-2.active {
+    animation-name: vibrate;
+    animation-duration: 0.5s;
+    animation-iteration-count: infinite;
+}
+
+@keyframes vibrate {
+    0% {transform: scale(1.0)}
+    50% {transform: scale(1.05)}
+    100% {transform: scale(1.0)}
+}
+
 .loader-text {
     position: absolute;
     top: 50%;
