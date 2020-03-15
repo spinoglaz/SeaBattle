@@ -109,12 +109,17 @@ function Field(size, styleClass) {
     this.gridElement.oncontextmenu = function() {return false};
     this.element.appendChild(this.gridElement);
     this.ships = [];
+    this.mouseX = 0;
+    this.mouseY = 0;
     this.onMouseMove = null;
+    this.onMouseDown = null;
 
     this.handleEvent = function(e) {
         if (e.type === 'mousemove') return this._onmousemove(e);
+        if (e.type === 'mousedown') return this._onmousedown(e);
     };
     this.gridElement.addEventListener('mousemove', this);
+    this.gridElement.addEventListener('mousedown', this);
 
     this.reset = function(size) {
         this.size = size;
@@ -171,6 +176,13 @@ function Field(size, styleClass) {
         y = clamp(y, 0, this.size - 1);
         if (this.onMouseMove) {
             this.onMouseMove(x, y);
+        }
+        this.mouseX = x;
+        this.mouseY = y;
+    };
+    this._onmousedown = function(e) {
+        if (this.onMouseDown) {
+            this.onMouseDown(e, this.mouseX, this.mouseY);
         }
     };
     this.reset(size);
@@ -236,7 +248,7 @@ function Placer(callbacks) {
     this.field.gridElement.onmouseleave = function() {
         self.preview.hide();
     };
-    this.field.gridElement.onmousedown = function(e) {
+    this.field.onMouseDown = function(e, x, y) {
         if (e.button === 0) {
             self._placeCurrentShip();
         }
@@ -346,7 +358,8 @@ function Placer(callbacks) {
     };
 }
 
-function BattleController() {
+function BattleController(callbacks) {
+    const self = this;
     this.fields = [
         new Field(0, 'field-1'),
         new Field(0, 'field-2'),
@@ -359,17 +372,30 @@ function BattleController() {
     this.reset = function(battle, player) {
         this.battle = battle;
         this.player = player;
+        this.enemy = player === 0 ? 1 : 0;
         for (let i = 0; i < this.fields.length; ++i) {
             this.fields[i].reset(battle.fieldSize);
+            this.fields[i].element.classList.remove('field-1');
+            this.fields[i].element.classList.remove('field-2');
             this.fleets[i].reset(battle.shipSizes);
+            this.fleets[i].element.classList.remove('fleet-1');
+            this.fleets[i].element.classList.remove('fleet-2');
         }
+        this.fields[this.player].element.classList.add('field-1');
+        this.fields[this.enemy].element.classList.add('field-2');
+        this.fleets[this.player].element.classList.add('fleet-1');
+        this.fleets[this.enemy].element.classList.add('fleet-2');
+        this.fields[this.player].onMouseDown = null;
+        this.fields[this.enemy].onMouseDown = function (e, x, y) {
+            callbacks.shoot(self.enemy, x, y);
+        };
     };
     this.setPlayerShips = function(ships) {
         for (let i = 0; i < ships.length; ++i) {
             const playerShip = ships[i];
             const ship = new Ship(playerShip.size);
             ship.setPosition(playerShip.x, playerShip.y);
-            this.fields[0].addShip(ship);
+            this.fields[this.player].addShip(ship);
         }
     };
 }
@@ -404,7 +430,9 @@ ui = {
         this.placingShipsScreen.appendChild(this.placer.field.element);
         this.placingShipsScreen.appendChild(this.placer.fleet.element);
 
-        this.battleController = new BattleController();
+        this.battleController = new BattleController({
+            shoot: callbacks.shoot,
+        });
         this.battleScreen.appendChild(this.battleController.fields[0].element);
         this.battleScreen.appendChild(this.battleController.fields[1].element);
         this.battleScreen.appendChild(this.battleController.fleets[0].element);
@@ -482,6 +510,7 @@ game = {
             startBattle: this.startBattle,
             leaveBattle: this.leaveBattle,
             placeShips: this.placeShips,
+            shoot: this.shoot,
         });
         ui.showLoader("Connecting to the server...");
         server.connect({
@@ -537,6 +566,9 @@ game = {
         }
         server.placeShips(commandShips);
     },
+    shoot: function(target, x, y) {
+        server.shoot(target, x, y)
+    }
 };
 
 game.start();
