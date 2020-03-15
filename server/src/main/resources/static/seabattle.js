@@ -95,8 +95,15 @@ function Field(size, styleClass) {
         this.element.classList.add(styleClass);
     this.gridElement = document.createElement('div');
     this.gridElement.classList.add('field-grid');
+    this.gridElement.oncontextmenu = function() {return false};
     this.element.appendChild(this.gridElement);
     this.ships = [];
+    this.onMouseMove = null;
+
+    this.handleEvent = function(e) {
+        if (e.type === 'mousemove') return this._onmousemove(e);
+    };
+    this.gridElement.addEventListener('mousemove', this);
 
     this.reset = function(size) {
         this.size = size;
@@ -140,6 +147,18 @@ function Field(size, styleClass) {
                 return false;
         }
         return true;
+    };
+    this._onmousemove = function(e) {
+        const bounds = this.gridElement.getBoundingClientRect();
+        const pixelsX = e.pageX - bounds.left;
+        const pixelsY = e.pageY - bounds.top;
+        let x = Math.round(pixelsX / bounds.width * this.size - 0.5);
+        let y = Math.round(pixelsY / bounds.height * this.size - 0.5);
+        x = clamp(x, 0, this.size - 1);
+        y = clamp(y, 0, this.size - 1);
+        if (this.onMouseMove) {
+            this.onMouseMove(x, y);
+        }
     };
     this.reset(size);
 }
@@ -222,15 +241,7 @@ ui = {
         const self = this;
         this.resetFieldButton.onclick = function() {self._resetField()};
         this.placeShipsButton.onclick = function() {callbacks.placeShips(self.placingField.ships);};
-        this.placingField.gridElement.oncontextmenu = function() {return false};
-        this.placingField.gridElement.onmousemove = function(e) {
-            const bounds = this.getBoundingClientRect();
-            const pixelsX = e.pageX - bounds.left;
-            const pixelsY = e.pageY - bounds.top;
-            let x = Math.round(pixelsX / bounds.width * ui.battle.fieldSize - 0.5);
-            let y = Math.round(pixelsY / bounds.height * ui.battle.fieldSize - 0.5);
-            x = clamp(x, 0, ui.battle.fieldSize - 1);
-            y = clamp(y, 0, ui.battle.fieldSize - 1);
+        this.placingField.onMouseMove = function(x, y) {
             if (!self.placingState.allPlaced) {
                 self.placingState.preview.setPosition(x, y);
                 self.placingState.preview.show();
