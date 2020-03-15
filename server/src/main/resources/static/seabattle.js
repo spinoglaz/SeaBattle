@@ -381,7 +381,7 @@ ui = {
     placeShipsButton: document.getElementById('placeShips'),
     resetFieldButton: document.getElementById('resetField'),
     placingGrid: document.querySelector('#placingShipsScreen .field-grid'),
-    placingShipsExitButton: document.getElementById('placingShipsExit'),
+    leaveBattleButton: document.getElementById('leaveBattle'),
     loader: document.getElementById('loader'),
     loaderText: document.getElementById('loaderText'),
     battleScreen: document.getElementById('battleScreen'),
@@ -410,7 +410,7 @@ ui = {
         this.battleScreen.appendChild(this.battleController.fleets[1].element);
 
         this.startBattleButton.onclick = callbacks.startBattle;
-        this.placingShipsExitButton.onclick = callbacks.exitPlacingShips;
+        this.leaveBattleButton.onclick = callbacks.leaveBattle;
         this.resetFieldButton.onclick = function() {self.placer.reset(self.battle)};
         this.placeShipsButton.onclick = function() {self._placeShips()};
     },
@@ -479,7 +479,7 @@ game = {
     start: function() {
         ui.start({
             startBattle: this.startBattle,
-            exitPlacingShips: this.exitPlacingShips,
+            leaveBattle: this.leaveBattle,
             placeShips: this.placeShips,
         });
         ui.showLoader("Connecting to the server...");
@@ -502,6 +502,7 @@ game = {
             shipSizes: joinedBattleEvent.shipSizes.sort(),
         };
         ui.joinBattle(battle, joinedBattleEvent.player);
+        ui.leaveBattleButton.classList.add('revealed');
     },
     onBattleUpdate: function() {
 
@@ -515,9 +516,11 @@ game = {
         ui.showLoader("Waiting for a battle...");
         server.startBattle();
     },
-    exitPlacingShips: function() {
+    leaveBattle: function() {
+        ui.battleScreen.classList.remove('active');
         ui.placingShipsScreen.classList.remove('active');
         ui.mainMenuScreen.classList.add('active');
+        ui.leaveBattleButton.classList.remove('revealed');
         // TODO leave the battle or reconnect websocket
     },
     placeShips: function(ships) {

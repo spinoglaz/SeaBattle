@@ -11,15 +11,6 @@ body {
     transform: translate(-50%,-50%);
 }
 
-#overlay {
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    top: 0;
-}
-
-
 #startBattle {
     position: absolute;
     width: 50%;
@@ -34,11 +25,12 @@ body {
     top: 65%;
 }
 
-#placingShipsExit {
+#leaveBattle {
     position: absolute;
-    width: 20%;
-    left: -30%;
-    top: -20%;
+    left: 32px;
+    top: 32px;
+    padding-left: 32px;
+    padding-right: 32px;
 }
 
 #resetField {

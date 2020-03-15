@@ -6,25 +6,23 @@
     <link rel="stylesheet" href="seabattle.css">
 </head>
 <body>
+    <button class="button-2 revealable" id="leaveBattle">&#8592; Exit</button>
     <div id="container">
-        <div id="overlay">
-            <div id="mainMenuScreen" class="screen">
-                <span class="title-1">Sea Battle</span>
-                <button class="button-1" id="startBattle">Battle</button>
-                <button class="button-1" id="startBotBattle">Bot Battle</button>
-            </div>
-            <div id="placingShipsScreen" class="screen">
-                <span class="title-2">Place your ships</span>
-                <button class="button-2" id="placingShipsExit">&#8592; Exit</button>
-                <button class="button-2" id="resetField">Reset</button>
-                <button class="button-2 revealable" id="placeShips">Go &#8594;</button>
-            </div>
-            <div id="battleScreen" class="screen">
-                <span class="title-2">Battle!</span>
-            </div>
-            <div id="loader" class="screen">
-                <span class="loader-text" id="loaderText">Loading...</span>
-            </div>
+        <div id="mainMenuScreen" class="screen">
+            <span class="title-1">Sea Battle</span>
+            <button class="button-1" id="startBattle">Battle</button>
+            <button class="button-1" id="startBotBattle">Bot Battle</button>
+        </div>
+        <div id="placingShipsScreen" class="screen">
+            <span class="title-2">Place your ships</span>
+            <button class="button-2" id="resetField">Reset</button>
+            <button class="button-2 revealable" id="placeShips">Go &#8594;</button>
+        </div>
+        <div id="battleScreen" class="screen">
+            <span class="title-2">Battle!</span>
+        </div>
+        <div id="loader" class="screen">
+            <span class="loader-text" id="loaderText">Loading...</span>
         </div>
     </div>
     <script src="seabattle.js"></script>
