@@ -93,6 +93,12 @@ function Ship(size, styleClass) {
         this.element.style.width = (this.getSizeX() * this.cellSize - 1) + 'px';
         this.element.style.height = (this.getSizeY() * this.cellSize - 1) + 'px';
     };
+    this.clone = function() {
+        const clone = new Ship(this.size);
+        clone.setPosition(this.x, this.y);
+        clone.setVertical(this.vertical);
+        return clone;
+    };
 
     this.setSize(size);
     this.disableContextMenu();
@@ -392,9 +398,7 @@ function BattleController(callbacks) {
     };
     this.setPlayerShips = function(ships) {
         for (let i = 0; i < ships.length; ++i) {
-            const playerShip = ships[i];
-            const ship = new Ship(playerShip.size);
-            ship.setPosition(playerShip.x, playerShip.y);
+            const ship = ships[i].clone();
             this.fields[this.player].addShip(ship);
         }
     };
