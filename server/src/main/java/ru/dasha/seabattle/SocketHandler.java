@@ -25,7 +25,6 @@ public class SocketHandler extends TextWebSocketHandler {
     private Map<Battle, List<WebSocketSession>> battleSessions = new ConcurrentHashMap<>();
     private Map<UUID, Battle> battles = new HashMap<>();
     private Battle pendingBattle;
-    private int pendingBattlePlayerCount;
 
     @Override
     public void handleTextMessage(WebSocketSession session, TextMessage message) throws IOException {
@@ -59,21 +58,21 @@ public class SocketHandler extends TextWebSocketHandler {
     }
 
     private void startBattle(WebSocketSession session) throws IOException {
-        SessionData sessionData = sessions.get(session);
-        if(pendingBattle != null) {
-            sessionData.battle = pendingBattle;
-            sessionData.player = pendingBattlePlayerCount;
-            pendingBattlePlayerCount++;
-            if(pendingBattlePlayerCount == pendingBattle.getPlayerCount()) {
-                pendingBattle = null;
-            }
-        }
-        else {
+        if(pendingBattle == null) {
             pendingBattle = createBattle();
-            sessionData.battle = pendingBattle;
-            sessionData.player = 0;
-            pendingBattlePlayerCount = 1;
         }
+
+        joinBattle(session, pendingBattle);
+
+        if(getFreeSession(pendingBattle) == -1) {
+            pendingBattle = null;
+        }
+    }
+
+    private void joinBattle(WebSocketSession session, Battle battle) throws IOException {
+        SessionData sessionData = sessions.get(session);
+        sessionData.battle = battle;
+        sessionData.player = getFreeSession(battle);
         battleSessions.get(sessionData.battle).set(sessionData.player, session);
 
         JoinedBattleEvent joinedBattle = new JoinedBattleEvent();
@@ -93,6 +92,16 @@ public class SocketHandler extends TextWebSocketHandler {
         battles.put(UUID.randomUUID(), battle);
         battleSessions.put(battle, Arrays.asList(new WebSocketSession[battle.getPlayerCount()]));
         return battle;
+    }
+
+    private int getFreeSession(Battle battle){
+        List<WebSocketSession> sessions = battleSessions.get(battle);
+        for (int i = 0; i < sessions.size(); i++) {
+            if(sessions.get(i) == null) {
+                return i;
+            }
+        }
+        return -1;
     }
 
     private void placeShips(WebSocketSession session, PlaceShipsCommand placeShips) throws IOException {
