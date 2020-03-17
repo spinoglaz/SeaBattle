@@ -119,6 +119,7 @@ function Field(size, styleClass) {
     this.mouseY = 0;
     this.onMouseMove = null;
     this.onMouseDown = null;
+    this.cells = [];
 
     this.handleEvent = function(e) {
         if (e.type === 'mousemove') return this._onmousemove(e);
@@ -131,10 +132,12 @@ function Field(size, styleClass) {
         this.size = size;
         this.gridElement.textContent = '';
         const cellCount = size * size;
+        this.cells = [];
         for(let i = 0; i < cellCount; ++i) {
             const cell = document.createElement('div');
             cell.classList.add('field-cell');
             this.gridElement.appendChild(cell);
+            this.cells.push(cell);
         }
         for (let i = 0; i < this.ships.length; ++i) {
             this.element.removeChild(this.ships[i].element);
@@ -171,6 +174,9 @@ function Field(size, styleClass) {
                 return false;
         }
         return true;
+    };
+    this.getCell = function(x, y) {
+        return this.cells[x + y * this.size];
     };
     this._onmousemove = function(e) {
         const bounds = this.gridElement.getBoundingClientRect();
@@ -390,6 +396,7 @@ function BattleController(callbacks) {
         new Fleet([]),
         new Fleet([]),
     ];
+    this.targetCell = null;
 
     this.reset = function(battle, player) {
         this.battle = battle;
@@ -403,20 +410,36 @@ function BattleController(callbacks) {
             this.fleets[i].element.classList.remove('fleet-1');
             this.fleets[i].element.classList.remove('fleet-2');
         }
+        this.enemyField = this.fields[this.enemy];
         this.fields[this.player].element.classList.add('field-1');
-        this.fields[this.enemy].element.classList.add('field-2');
+        this.enemyField.element.classList.add('field-2');
         this.fleets[this.player].element.classList.add('fleet-1');
         this.fleets[this.enemy].element.classList.add('fleet-2');
         this.fields[this.player].onMouseDown = null;
-        this.fields[this.enemy].onMouseDown = function (e, x, y) {
+        this.fields[this.player].onMouseMove = null;
+        this.enemyField.onMouseDown = function(e, x, y) {
             callbacks.shoot(self.enemy, x, y);
         };
+        this.fields[this.enemy].onMouseMove = function(x, y) {self._onEnemyFieldMouseMove(x, y)};
+        this.fields[this.enemy].gridElement.onmouseleave = function() {self._onEnemyFieldMouseLeave()};
         this._setBattleStatusText('Waiting for opponent...');
     };
     this.setPlayerShips = function(ships) {
         for (let i = 0; i < ships.length; ++i) {
             const ship = ships[i].clone();
             this.fields[this.player].addShip(ship);
+        }
+    };
+    this._onEnemyFieldMouseMove = function(x, y) {
+        if (this.targetCell != null) {
+            this.targetCell.classList.remove('targeted');
+        }
+        this.targetCell = self.enemyField.getCell(x, y);
+        this.targetCell.classList.add('targeted');
+    };
+    this._onEnemyFieldMouseLeave = function() {
+        if (this.targetCell != null) {
+            this.targetCell.classList.remove('targeted');
         }
     };
     this._setBattleStatusText = function(text, animate) {

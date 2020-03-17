@@ -145,12 +145,10 @@ body {
 }
 
 .title-2.active {
-    animation-name: vibrate;
-    animation-duration: 0.5s;
-    animation-iteration-count: infinite;
+    animation: title-2-vibrate 0.5s infinite;
 }
 
-@keyframes vibrate {
+@keyframes title-2-vibrate {
     0% {transform: scale(1.0)}
     50% {transform: scale(1.05)}
     100% {transform: scale(1.0)}
@@ -237,6 +235,20 @@ body {
     border-color: rgba(255, 255, 255, 0.4);
     border-style: solid;
     border-width: 0 1px 1px 0;
+}
+
+.field-cell.targeted {
+    background-image: url('target.svg');
+    background-repeat: no-repeat;
+    background-position: center center;
+    background-size: 90%;
+}
+
+.field-cell.empty {
+    background-image: url('dot.svg');
+    background-repeat: no-repeat;
+    background-position: center center;
+    background-size: 50%;
 }
 
 .left-cell-label {
