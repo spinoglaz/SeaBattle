@@ -419,9 +419,7 @@ function BattleController(callbacks) {
         this.fleets[this.enemy].element.classList.add('fleet-2');
         this.fields[this.player].onMouseDown = null;
         this.fields[this.player].onMouseMove = null;
-        this.enemyField.onMouseDown = function(e, x, y) {
-            callbacks.shoot(self.enemy, x, y);
-        };
+        this.enemyField.onMouseDown = function(e, x, y) {self.onEnemyFieldMouseDown(self.enemy, x, y)};
         this.fields[this.enemy].onMouseMove = function(x, y) {self._onEnemyFieldMouseMove(x, y)};
         this.fields[this.enemy].gridElement.onmouseleave = function() {self._onEnemyFieldMouseLeave()};
         this._setBattleStatusText('Waiting for opponent...');
@@ -432,12 +430,19 @@ function BattleController(callbacks) {
             this.fields[this.player].addShip(ship);
         }
     };
+    this.onEnemyFieldMouseDown = function(e, x, y) {
+        if (this.status === 'SHOOTING') {
+            callbacks.shoot(self.enemy, x, y);
+        }
+    };
     this._onEnemyFieldMouseMove = function(x, y) {
         if (this.targetCell != null) {
             this.targetCell.classList.remove('targeted');
         }
-        this.targetCell = self.enemyField.getCell(x, y);
-        this.targetCell.classList.add('targeted');
+        if (this.status === 'SHOOTING') {
+            this.targetCell = self.enemyField.getCell(x, y);
+            this.targetCell.classList.add('targeted');
+        }
     };
     this._onEnemyFieldMouseLeave = function() {
         if (this.targetCell != null) {
@@ -452,18 +457,18 @@ function BattleController(callbacks) {
             this.battleStatusElement.classList.remove('active');
     };
     this.setBattleState = function(battleState) {
-        const status = battleState.players[this.player];
+        this.status = battleState.players[this.player];
         const enemyStatus = battleState.players[this.enemy];
-        if (status === 'WAITING') {
+        if (this.status === 'WAITING') {
             this._setBattleStatusText('Wait for opponent');
         }
-        else if (status === 'SHOOTING') {
+        else if (this.status === 'SHOOTING') {
             this._setBattleStatusText('Your turn', true);
         }
-        else if (status === 'WINNER') {
+        else if (this.status === 'WINNER') {
             this._setBattleStatusText('You win!');
         }
-        else if (status === 'LOSER') {
+        else if (this.status === 'LOSER') {
             this._setBattleStatusText('You lose!');
         }
         if (enemyStatus === 'NO_PLAYER') {
@@ -489,9 +494,9 @@ function BattleController(callbacks) {
             this._setCellClass(field, shot.x + 1, shot.y + 1, 'empty');
             this._setCellClass(field, shot.x - 1, shot.y + 1, 'empty');
             this._setCellClass(field, shot.x, shot.y - 1, 'empty');
+            this._setCellClass(field, shot.x, shot.y + 1, 'empty');
             this._setCellClass(field, shot.x + 1, shot.y, 'empty');
-            this._setCellClass(field, shot.x, shot.y + 1, 'empty');
-            this._setCellClass(field, shot.x, shot.y + 1, 'empty');
+            this._setCellClass(field, shot.x - 1, shot.y, 'empty');
         }
     };
     this._setCellClass = function(field, x, y, styleClass) {
