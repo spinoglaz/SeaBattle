@@ -13,9 +13,7 @@ import ru.dasha.seabattle.exceptions.WrongTargetException;
 import ru.dasha.seabattle.messages.*;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Component
@@ -25,6 +23,7 @@ public class SocketHandler extends TextWebSocketHandler {
 
     private Map<WebSocketSession, SessionData> sessions = new ConcurrentHashMap<>();
     private Map<Battle, List<WebSocketSession>> battleSessions = new ConcurrentHashMap<>();
+    private Map<UUID, Battle> battles = new HashMap<>();
     private Battle pendingBattle;
     private int pendingBattlePlayerCount;
 
@@ -70,11 +69,10 @@ public class SocketHandler extends TextWebSocketHandler {
             }
         }
         else {
-            pendingBattle = new Battle(2, 10, 10, new int[] {4, 3, 3, 2, 2, 2, 1, 1, 1, 1});
+            pendingBattle = createBattle();
             sessionData.battle = pendingBattle;
             sessionData.player = 0;
             pendingBattlePlayerCount = 1;
-            battleSessions.put(pendingBattle, Arrays.asList(new WebSocketSession[pendingBattle.getPlayerCount()]));
         }
         battleSessions.get(sessionData.battle).set(sessionData.player, session);
 
@@ -88,6 +86,13 @@ public class SocketHandler extends TextWebSocketHandler {
 
     private void startBotBattle(WebSocketSession session) {
         System.out.println("startBotBattle");
+    }
+
+    private Battle createBattle() {
+        Battle battle = new Battle(2, 10, 10, new int[] {4, 3, 3, 2, 2, 2, 1, 1, 1, 1});
+        battles.put(UUID.randomUUID(), battle);
+        battleSessions.put(battle, Arrays.asList(new WebSocketSession[battle.getPlayerCount()]));
+        return battle;
     }
 
     private void placeShips(WebSocketSession session, PlaceShipsCommand placeShips) throws IOException {
