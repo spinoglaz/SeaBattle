@@ -41,6 +41,10 @@ public class SocketHandler extends TextWebSocketHandler {
         if(clientMessage.shoot != null) {
             shoot(session, clientMessage.shoot);
         }
+        if(clientMessage.joinBattle != null){
+           UUID battleId = UUID.fromString(clientMessage.joinBattle.battleId);
+           joinBattle(session, battleId);
+        }
     }
 
     @Override
@@ -67,6 +71,15 @@ public class SocketHandler extends TextWebSocketHandler {
         if(getFreeSession(pendingBattle) == -1) {
             pendingBattle = null;
         }
+    }
+
+    private void joinBattle(WebSocketSession session, UUID battleId) throws IOException {
+        Battle battle = battles.get(battleId);
+        if(battle == null) {
+            sendErrorMessage(session, "No such battle");
+            return;
+        }
+        joinBattle(session, battle);
     }
 
     private void joinBattle(WebSocketSession session, Battle battle) throws IOException {
