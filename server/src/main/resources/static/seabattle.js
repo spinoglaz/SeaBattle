@@ -292,6 +292,7 @@ function PlacementController(callbacks) {
             this._placeShip(i, x, y, false);
             x += fleetShip.size + 1;
         }
+        this._setAllPlaced(true);
     };
     this._onGridMouseMove = function(x, y) {
         if (!this.allPlaced) {
