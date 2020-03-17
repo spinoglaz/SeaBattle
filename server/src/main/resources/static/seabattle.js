@@ -235,7 +235,7 @@ function Fleet(shipSizes, styleClass) {
     this.select(null);
 }
 
-function Placer(callbacks) {
+function PlacementController(callbacks) {
     const self = this;
     this.field = new Field(0, 'field-placing');
     this.fleet = new Fleet([], 'fleet-placing');
@@ -279,6 +279,19 @@ function Placer(callbacks) {
         this._grabShip(0);
         this.preview.hide();
         this.preview.setCellSize(this.field.gridElement.offsetWidth / this.field.size);
+    };
+    this.placeRandomly = function() {
+        let x = 0;
+        let y = 0;
+        for (let i = 0; i < this.fleet.size; ++i) {
+            const fleetShip = this.fleet.ships[i];
+            if (x + fleetShip.size > this.field.size) {
+                x = 0;
+                y += 2;
+            }
+            this._placeShip(i, x, y, false);
+            x += fleetShip.size + 1;
+        }
     };
     this._onGridMouseMove = function(x, y) {
         if (!this.allPlaced) {
@@ -439,6 +452,7 @@ ui = {
     startBotBattleButton: document.getElementById('startBotBattle'),
     placingShipsScreen: document.getElementById('placingShipsScreen'),
     placeShipsButton: document.getElementById('placeShips'),
+    placeRandomlyButton: document.getElementById('placeRandomly'),
     resetFieldButton: document.getElementById('resetField'),
     placingGrid: document.querySelector('#placingShipsScreen .field-grid'),
     leaveBattleButton: document.getElementById('leaveBattle'),
@@ -450,7 +464,7 @@ ui = {
         const self = this;
         this.callbacks = callbacks;
 
-        this.placer = new Placer({
+        this.placementController = new PlacementController({
             allPlaced: function(allPlaced) {
                 if (allPlaced) {
                     self.placeShipsButton.classList.add('revealed');
@@ -460,8 +474,8 @@ ui = {
                 }
             },
         });
-        this.placingShipsScreen.appendChild(this.placer.field.element);
-        this.placingShipsScreen.appendChild(this.placer.fleet.element);
+        this.placingShipsScreen.appendChild(this.placementController.field.element);
+        this.placingShipsScreen.appendChild(this.placementController.fleet.element);
 
         this.battleController = new BattleController({
             shoot: callbacks.shoot,
@@ -474,7 +488,8 @@ ui = {
 
         this.startBattleButton.onclick = callbacks.startBattle;
         this.leaveBattleButton.onclick = callbacks.leaveBattle;
-        this.resetFieldButton.onclick = function() {self.placer.reset(self.battle)};
+        this.placeRandomlyButton.onclick = function() {self.placementController.placeRandomly()};
+        this.resetFieldButton.onclick = function() {self.placementController.reset(self.battle)};
         this.placeShipsButton.onclick = function() {self._placeShips()};
     },
     showLoader: function(text) {
@@ -493,16 +508,16 @@ ui = {
         this.hideLoader();
         this.placeShipsButton.classList.remove('revealed');
         this.placingShipsScreen.classList.add('active');
-        this.placer.reset(battle);
+        this.placementController.reset(battle);
         this.battleController.reset(battle, player);
     },
     setBattleState: function(battleState) {
         this.battleController.setBattleState(battleState);
     },
     _placeShips: function() {
-        this.callbacks.placeShips(this.placer.placedShips);
+        this.callbacks.placeShips(this.placementController.placedShips);
         this.showBattle();
-        this.battleController.setPlayerShips(this.placer.placedShips);
+        this.battleController.setPlayerShips(this.placementController.placedShips);
     },
 };
 

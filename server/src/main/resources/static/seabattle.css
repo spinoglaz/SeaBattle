@@ -33,6 +33,13 @@ body {
     padding-right: 32px;
 }
 
+#placeRandomly {
+    position: absolute;
+    width: 20%;
+    left: 0;
+    bottom: 0;
+}
+
 #resetField {
     position: absolute;
     width: 20%;
