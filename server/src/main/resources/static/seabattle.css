@@ -248,7 +248,14 @@ body {
     background-image: url('dot.svg');
     background-repeat: no-repeat;
     background-position: center center;
-    background-size: 50%;
+    background-size: 30%;
+}
+
+.field-cell.hit {
+    background-image: url('flame.svg');
+    background-repeat: no-repeat;
+    background-position: center center;
+    background-size: 80%;
 }
 
 .left-cell-label {

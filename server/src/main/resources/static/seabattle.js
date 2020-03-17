@@ -176,6 +176,8 @@ function Field(size, styleClass) {
         return true;
     };
     this.getCell = function(x, y) {
+        if (x < 0 || x >= this.size) return null;
+        if (y < 0 || y >= this.size) return null;
         return this.cells[x + y * this.size];
     };
     this._onmousemove = function(e) {
@@ -467,6 +469,35 @@ function BattleController(callbacks) {
         if (enemyStatus === 'NO_PLAYER') {
             // TODO show that no enemy player
         }
+    };
+    this.shot = function(shot) {
+        const field = this.fields[shot.target];
+        if (shot.result === 'MISS') {
+            this._setCellClass(field, shot.x, shot.y, 'empty');
+        }
+        else if (shot.result === 'HIT') {
+            this._setCellClass(field, shot.x, shot.y, 'hit');
+            this._setCellClass(field, shot.x - 1, shot.y - 1, 'empty');
+            this._setCellClass(field, shot.x + 1, shot.y - 1, 'empty');
+            this._setCellClass(field, shot.x + 1, shot.y + 1, 'empty');
+            this._setCellClass(field, shot.x - 1, shot.y + 1, 'empty');
+        }
+        else if (shot.result === 'KILL' || shot.result === 'KILL_ALL') {
+            this._setCellClass(field, shot.x, shot.y, 'hit');
+            this._setCellClass(field, shot.x - 1, shot.y - 1, 'empty');
+            this._setCellClass(field, shot.x + 1, shot.y - 1, 'empty');
+            this._setCellClass(field, shot.x + 1, shot.y + 1, 'empty');
+            this._setCellClass(field, shot.x - 1, shot.y + 1, 'empty');
+            this._setCellClass(field, shot.x, shot.y - 1, 'empty');
+            this._setCellClass(field, shot.x + 1, shot.y, 'empty');
+            this._setCellClass(field, shot.x, shot.y + 1, 'empty');
+            this._setCellClass(field, shot.x, shot.y + 1, 'empty');
+        }
+    };
+    this._setCellClass = function(field, x, y, styleClass) {
+        const cell = field.getCell(x, y);
+        if (cell == null) return;
+        cell.classList.add(styleClass);
     }
 }
 
@@ -537,6 +568,9 @@ ui = {
     },
     setBattleState: function(battleState) {
         this.battleController.setBattleState(battleState);
+    },
+    shot: function(shot) {
+        this.battleController.shot(shot);
     },
     _placeShips: function() {
         this.callbacks.placeShips(this.placementController.placedShips);
@@ -614,7 +648,7 @@ game = {
         ui.setBattleState(event);
     },
     onShot: function(event) {
-
+        ui.shot(event);
     },
     // UI events
     startBattle: function() {
