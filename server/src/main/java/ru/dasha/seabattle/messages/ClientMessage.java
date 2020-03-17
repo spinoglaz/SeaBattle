@@ -6,4 +6,5 @@ public class ClientMessage {
     public StartBotBattleCommand startBotBattle;
     public PlaceShipsCommand placeShips;
     public ShootCommand shoot;
+    public JoinBattleCommand joinBattle;
 }

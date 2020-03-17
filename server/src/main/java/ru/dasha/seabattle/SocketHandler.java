@@ -13,9 +13,7 @@ import ru.dasha.seabattle.exceptions.WrongTargetException;
 import ru.dasha.seabattle.messages.*;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Component
@@ -25,8 +23,8 @@ public class SocketHandler extends TextWebSocketHandler {
 
     private Map<WebSocketSession, SessionData> sessions = new ConcurrentHashMap<>();
     private Map<Battle, List<WebSocketSession>> battleSessions = new ConcurrentHashMap<>();
+    private Map<UUID, Battle> battles = new HashMap<>();
     private Battle pendingBattle;
-    private int pendingBattlePlayerCount;
 
     @Override
     public void handleTextMessage(WebSocketSession session, TextMessage message) throws IOException {
@@ -42,6 +40,10 @@ public class SocketHandler extends TextWebSocketHandler {
         }
         if(clientMessage.shoot != null) {
             shoot(session, clientMessage.shoot);
+        }
+        if(clientMessage.joinBattle != null){
+           UUID battleId = UUID.fromString(clientMessage.joinBattle.battleId);
+           joinBattle(session, battleId);
         }
     }
 
@@ -60,22 +62,30 @@ public class SocketHandler extends TextWebSocketHandler {
     }
 
     private void startBattle(WebSocketSession session) throws IOException {
+        if(pendingBattle == null) {
+            pendingBattle = createBattle();
+        }
+
+        joinBattle(session, pendingBattle);
+
+        if(getFreeSession(pendingBattle) == -1) {
+            pendingBattle = null;
+        }
+    }
+
+    private void joinBattle(WebSocketSession session, UUID battleId) throws IOException {
+        Battle battle = battles.get(battleId);
+        if(battle == null) {
+            sendErrorMessage(session, "No such battle");
+            return;
+        }
+        joinBattle(session, battle);
+    }
+
+    private void joinBattle(WebSocketSession session, Battle battle) throws IOException {
         SessionData sessionData = sessions.get(session);
-        if(pendingBattle != null) {
-            sessionData.battle = pendingBattle;
-            sessionData.player = pendingBattlePlayerCount;
-            pendingBattlePlayerCount++;
-            if(pendingBattlePlayerCount == pendingBattle.getPlayerCount()) {
-                pendingBattle = null;
-            }
-        }
-        else {
-            pendingBattle = new Battle(2, 10, 10, new int[] {4, 3, 3, 2, 2, 2, 1, 1, 1, 1});
-            sessionData.battle = pendingBattle;
-            sessionData.player = 0;
-            pendingBattlePlayerCount = 1;
-            battleSessions.put(pendingBattle, Arrays.asList(new WebSocketSession[pendingBattle.getPlayerCount()]));
-        }
+        sessionData.battle = battle;
+        sessionData.player = getFreeSession(battle);
         battleSessions.get(sessionData.battle).set(sessionData.player, session);
 
         JoinedBattleEvent joinedBattle = new JoinedBattleEvent();
@@ -88,6 +98,23 @@ public class SocketHandler extends TextWebSocketHandler {
 
     private void startBotBattle(WebSocketSession session) {
         System.out.println("startBotBattle");
+    }
+
+    private Battle createBattle() {
+        Battle battle = new Battle(2, 10, 10, new int[] {4, 3, 3, 2, 2, 2, 1, 1, 1, 1});
+        battles.put(UUID.randomUUID(), battle);
+        battleSessions.put(battle, Arrays.asList(new WebSocketSession[battle.getPlayerCount()]));
+        return battle;
+    }
+
+    private int getFreeSession(Battle battle){
+        List<WebSocketSession> sessions = battleSessions.get(battle);
+        for (int i = 0; i < sessions.size(); i++) {
+            if(sessions.get(i) == null) {
+                return i;
+            }
+        }
+        return -1;
     }
 
     private void placeShips(WebSocketSession session, PlaceShipsCommand placeShips) throws IOException {
