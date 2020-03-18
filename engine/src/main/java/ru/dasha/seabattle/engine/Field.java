@@ -21,6 +21,15 @@ public class Field {
         return ships;
     }
 
+    public Ship getShipAt(int x, int y) {
+        for (Ship ship : ships) {
+            if(x >= ship.getX() && x < ship.getX() + ship.getSizeX() && y >= ship.getY() && y < ship.getY() + ship.getSizeY()) {
+                return ship;
+            }
+        }
+        return null;
+    }
+
     public int getSizeX() {
         return sizeX;
     }

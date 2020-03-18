@@ -131,7 +131,7 @@ public class SocketHandler extends TextWebSocketHandler {
         Field field = new Field(battle.getFieldSizeX(), battle.getFieldSizeY());
         try {
             for(int i = 0; i < placeShips.ships.length; i++) {
-                PlaceShipsCommand.Ship commandShip = placeShips.ships[i];
+                ShipDTO commandShip = placeShips.ships[i];
                 Ship ship = new Ship(commandShip.x, commandShip.y, commandShip.size, commandShip.vertical);
                 field.placeShip(ship);
             }
@@ -182,15 +182,27 @@ public class SocketHandler extends TextWebSocketHandler {
                 break;
             case KILL:
                 shotEvent.result = ShootResultDTO.KILL;
+                shotEvent.killedShip = convert(battle.getField(shoot.target).getShipAt(shoot.x, shoot.y));
                 break;
             case KILL_ALL:
                 shotEvent.result = ShootResultDTO.KILL_ALL;
+                shotEvent.killedShip = convert(battle.getField(shoot.target).getShipAt(shoot.x, shoot.y));
+
                 break;
         }
         for (WebSocketSession battleSession: battleSessions.get(battle)) {
             send(battleSession, shotEvent);
             send(battleSession, battleUpdate);
         }
+    }
+
+    private ShipDTO convert(Ship ship) {
+        ShipDTO shipDTO = new ShipDTO();
+        shipDTO.x = ship.getX();
+        shipDTO.y = ship.getY();
+        shipDTO.vertical = ship.isVertical();
+        shipDTO.size = ship.getSize();
+        return shipDTO;
     }
 
     private BattleUpdateEvent createBattleUpdateEvent(Battle battle) {

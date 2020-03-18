@@ -1,3 +1,4 @@
 rootProject.name = 'seabattle'
 include 'engine'
 include 'server'
+include 'bot'
