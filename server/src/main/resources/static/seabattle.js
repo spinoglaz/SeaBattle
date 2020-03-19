@@ -2,6 +2,17 @@ function clamp(num, min, max) {
     return Math.min(Math.max(num, min), max);
 }
 
+function calcGridCoordinates(element, e, sizeX, sizeY) {
+    const bounds = element.getBoundingClientRect();
+    const pixelsX = e.pageX - bounds.left;
+    const pixelsY = e.pageY - bounds.top;
+    let x = Math.round(pixelsX / bounds.width * sizeX - 0.5);
+    let y = Math.round(pixelsY / bounds.height * sizeY - 0.5);
+    x = clamp(x, 0, sizeX - 1);
+    y = clamp(y, 0, sizeY - 1);
+    return {x: x, y: y}
+}
+
 function Ship(size, styleClass) {
     this.size = 0;
     this.vertical = false;
@@ -189,18 +200,12 @@ function Field(size, styleClass) {
         return this.cells[x + y * this.size];
     };
     this._onmousemove = function(e) {
-        const bounds = this.gridElement.getBoundingClientRect();
-        const pixelsX = e.pageX - bounds.left;
-        const pixelsY = e.pageY - bounds.top;
-        let x = Math.round(pixelsX / bounds.width * this.size - 0.5);
-        let y = Math.round(pixelsY / bounds.height * this.size - 0.5);
-        x = clamp(x, 0, this.size - 1);
-        y = clamp(y, 0, this.size - 1);
+        const pos = calcGridCoordinates(this.gridElement, e, this.size, this.size)
+        this.mouseX = pos.x;
+        this.mouseY = pos.y;
         if (this.onMouseMove) {
-            this.onMouseMove(x, y);
+            this.onMouseMove(this.mouseX, this.mouseY);
         }
-        this.mouseX = x;
-        this.mouseY = y;
     };
     this._onmousedown = function(e) {
         if (this.onMouseDown) {
@@ -257,7 +262,7 @@ function PlacementController(callbacks) {
     this.fleet = new Fleet([], 'fleet-placing');
     this.grabIndex = 0;
     this.grabVertical = false;
-    this.grabOffset = 0;  // TODO Implement it
+    this.grabOffset = 0;
     this.placedShips = [];
     this.allPlaced = false;
 
@@ -312,19 +317,28 @@ function PlacementController(callbacks) {
     };
     this._onGridMouseMove = function(x, y) {
         if (!this.allPlaced) {
-            this.preview.setPosition(x, y);
+            const dx = this.preview.vertical ?  0 : this.grabOffset;
+            const dy = this.preview.vertical ?  this.grabOffset : 0;
+            this.preview.setPosition(x - dx, y - dy);
             this.preview.show();
             this._validatePreview();
         }
     };
     this._toggleVertical = function() {
+        if (this.preview.vertical) {
+            this.preview.setPosition(this.preview.x - this.grabOffset, this.preview.y + this.grabOffset);
+        }
+        else {
+            this.preview.setPosition(this.preview.x + this.grabOffset, this.preview.y - this.grabOffset);
+        }
         this.grabVertical = !this.grabVertical;
         this.preview.setVertical(this.grabVertical);
         this._validatePreview();
     };
-    this._grabShip = function(index) {
+    this._grabShip = function(index, offset) {
         const fleetShip = this.fleet.select(index);
         this.grabIndex = index;
+        this.grabOffset = offset ? offset : 0;
         if (index == null) {
             this.preview.hide();
         }
@@ -369,7 +383,9 @@ function PlacementController(callbacks) {
         const self = this;
         placedShip.element.onmousedown = function(e) {
             if (e.button === 0) {
-                self._grabShip(shipIndex);
+                const pos = calcGridCoordinates(placedShip.element, e, placedShip.getSizeX(), placedShip.getSizeY());
+                const offset = Math.max(pos.x, pos.y);
+                self._grabShip(shipIndex, offset);
             }
         };
         this.field.addShip(placedShip);
