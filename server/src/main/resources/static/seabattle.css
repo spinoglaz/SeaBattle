@@ -33,6 +33,13 @@ body {
     padding-right: 32px;
 }
 
+#placeRandomly {
+    position: absolute;
+    width: 20%;
+    left: 0;
+    bottom: 0;
+}
+
 #resetField {
     position: absolute;
     width: 20%;
@@ -137,6 +144,16 @@ body {
     letter-spacing: 4px;
 }
 
+.title-2.active {
+    animation: title-2-vibrate 0.5s infinite;
+}
+
+@keyframes title-2-vibrate {
+    0% {transform: scale(1.0)}
+    50% {transform: scale(1.05)}
+    100% {transform: scale(1.0)}
+}
+
 .loader-text {
     position: absolute;
     top: 50%;
@@ -220,6 +237,27 @@ body {
     border-width: 0 1px 1px 0;
 }
 
+.field-cell.targeted {
+    background-image: url('target.svg');
+    background-repeat: no-repeat;
+    background-position: center center;
+    background-size: 90%;
+}
+
+.field-cell.empty {
+    background-image: url('dot.svg');
+    background-repeat: no-repeat;
+    background-position: center center;
+    background-size: 30%;
+}
+
+.field-cell.hit {
+    background-image: url('flame.svg');
+    background-repeat: no-repeat;
+    background-position: center center;
+    background-size: 80%;
+}
+
 .left-cell-label {
     position: relative;
     left: -150%;
@@ -235,7 +273,12 @@ body {
     box-shadow: 0 0 0 3px white;
 }
 
-.ship:hover, .ship.selected {
+.field-placing .ship:hover,
+.field-placing .ship.selected,
+.fleet-placing .ship:hover,
+.fleet-placing .ship.selected,
+.field-1 .ship:hover,
+.fleet-1 .ship:hover {
     box-shadow: 0 0 0 3px #c9ff3c;
 }
 
@@ -267,6 +310,13 @@ body {
     background-repeat: no-repeat;
     background-position: center center;
     background-size: 70%;
+}
+
+.ship.sunk .ship-cell {
+    background-image: url('flame.svg');
+    background-repeat: no-repeat;
+    background-position: center center;
+    background-size: 80%;
 }
 
 .field .ship {
