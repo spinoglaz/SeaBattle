@@ -611,6 +611,10 @@ server = {
         this.ws.onopen = this.callbacks.connected;
         this.ws.onmessage = function(event) {server.onMessage(event);}
     },
+    reconnect: function() {
+        this.ws.close();
+        this.connect(this.callbacks);
+    },
     startBattle: function() {
         this.send({startBattle: {}});
     },
@@ -624,7 +628,6 @@ server = {
         this.ws.send(JSON.stringify(obj));
     },
     onMessage: function(event) {
-        console.log(this);
         const serverMessage = JSON.parse(event.data);
         if (serverMessage.joinedToBattle) {
             this.callbacks.joinedToBattle(serverMessage.joinedToBattle);
@@ -683,9 +686,9 @@ game = {
     leaveBattle: function() {
         ui.battleScreen.classList.remove('active');
         ui.placingShipsScreen.classList.remove('active');
-        ui.mainMenuScreen.classList.add('active');
         ui.leaveBattleButton.classList.remove('revealed');
-        // TODO leave the battle or reconnect websocket
+        ui.showLoader("Connecting to the server...");
+        server.reconnect();
     },
     placeShips: function(ships) {
         const commandShips = [];
