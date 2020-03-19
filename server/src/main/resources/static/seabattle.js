@@ -468,7 +468,7 @@ function BattleController(callbacks) {
         this.status = battleState.players[this.player];
         const enemyStatus = battleState.players[this.enemy];
         if (this.status === 'WAITING') {
-            this._setBattleStatusText('Wait for opponent');
+            this._setBattleStatusText('Opponent turn');
         }
         else if (this.status === 'SHOOTING') {
             this._setBattleStatusText('Your turn', true);
@@ -480,7 +480,7 @@ function BattleController(callbacks) {
             this._setBattleStatusText('You lose!');
         }
         if (enemyStatus === 'NO_PLAYER') {
-            // TODO show that no enemy player
+            this._setBattleStatusText('No opponent');
         }
     };
     this.shot = function(shot) {
