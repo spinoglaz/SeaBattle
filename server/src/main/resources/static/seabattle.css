@@ -273,7 +273,12 @@ body {
     box-shadow: 0 0 0 3px white;
 }
 
-.ship:hover, .ship.selected {
+.field-placing .ship:hover,
+.field-placing .ship.selected,
+.fleet-placing .ship:hover,
+.fleet-placing .ship.selected,
+.field-1 .ship:hover,
+.fleet-1 .ship:hover {
     box-shadow: 0 0 0 3px #c9ff3c;
 }
 
@@ -305,6 +310,13 @@ body {
     background-repeat: no-repeat;
     background-position: center center;
     background-size: 70%;
+}
+
+.ship.sunk .ship-cell {
+    background-image: url('flame.svg');
+    background-repeat: no-repeat;
+    background-position: center center;
+    background-size: 80%;
 }
 
 .field .ship {

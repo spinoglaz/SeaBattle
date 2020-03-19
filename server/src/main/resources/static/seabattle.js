@@ -9,6 +9,7 @@ function Ship(size, styleClass) {
     this.element.classList.add('ship');
     this.cells = [];
     this.invalid = false;
+    this.sunk = false;
     if (styleClass) {
         this.element.classList.add(styleClass);
     }
@@ -62,6 +63,13 @@ function Ship(size, styleClass) {
     };
     this.setVisible = function(visible) {
         this.element.style.visibility = visible ? 'visible' : 'hidden';
+    };
+    this.setSunk = function(sunk) {
+        if (sunk)
+            this.element.classList.add('sunk');
+        else
+            this.element.classList.remove('sunk');
+        this.sunk = sunk;
     };
     this.hide = function() {
         this.setVisible(false);
@@ -477,33 +485,44 @@ function BattleController(callbacks) {
     };
     this.shot = function(shot) {
         const field = this.fields[shot.target];
+        const fleet = this.fleets[shot.target];
         if (shot.result === 'MISS') {
             this._setCellClass(field, shot.x, shot.y, 'empty');
         }
         else if (shot.result === 'HIT') {
             this._setCellClass(field, shot.x, shot.y, 'hit');
-            this._setCellClass(field, shot.x - 1, shot.y - 1, 'empty');
-            this._setCellClass(field, shot.x + 1, shot.y - 1, 'empty');
-            this._setCellClass(field, shot.x + 1, shot.y + 1, 'empty');
-            this._setCellClass(field, shot.x - 1, shot.y + 1, 'empty');
         }
         else if (shot.result === 'KILL' || shot.result === 'KILL_ALL') {
+            const ship = new Ship(shot.killedShip.size);
+            ship.setVertical(shot.killedShip.vertical);
+            ship.setPosition(shot.killedShip.x, shot.killedShip.y);
+            field.addShip(ship);
             this._setCellClass(field, shot.x, shot.y, 'hit');
-            this._setCellClass(field, shot.x - 1, shot.y - 1, 'empty');
-            this._setCellClass(field, shot.x + 1, shot.y - 1, 'empty');
-            this._setCellClass(field, shot.x + 1, shot.y + 1, 'empty');
-            this._setCellClass(field, shot.x - 1, shot.y + 1, 'empty');
-            this._setCellClass(field, shot.x, shot.y - 1, 'empty');
-            this._setCellClass(field, shot.x, shot.y + 1, 'empty');
-            this._setCellClass(field, shot.x + 1, shot.y, 'empty');
-            this._setCellClass(field, shot.x - 1, shot.y, 'empty');
+            for (let x = ship.x - 1; x <= ship.x + ship.getSizeX(); x++) {
+                this._setCellClass(field, x, ship.y - 1, 'empty');
+                this._setCellClass(field, x, ship.y + ship.getSizeY(), 'empty');
+            }
+            for (let y = ship.y - 1; y <= ship.y + ship.getSizeY(); y++) {
+                this._setCellClass(field, ship.x - 1, y, 'empty');
+                this._setCellClass(field, ship.x + ship.getSizeX(), y, 'empty');
+            }
+            const sunkIndex = this._getSunkIndex(fleet, ship.size);
+            fleet.ships[sunkIndex].setSunk(true);
+        }
+    };
+    this._getSunkIndex = function(fleet, shipSize) {
+        for(let i = 0; i < fleet.size; ++i) {
+            const ship = fleet.ships[i];
+            if (!ship.sunk && ship.size === shipSize) {
+                return i;
+            }
         }
     };
     this._setCellClass = function(field, x, y, styleClass) {
         const cell = field.getCell(x, y);
         if (cell == null) return;
         cell.classList.add(styleClass);
-    }
+    };
 }
 
 ui = {
