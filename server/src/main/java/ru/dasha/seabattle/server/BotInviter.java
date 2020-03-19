@@ -2,15 +2,13 @@ package ru.dasha.seabattle.server;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import kong.unirest.HttpResponse;
 import kong.unirest.Unirest;
 import kong.unirest.json.JSONObject;
 
 import java.util.HashMap;
 import java.util.UUID;
-import java.util.function.Consumer;
 
-public class BotInviter implements Consumer<HttpResponse> {
+public class BotInviter {
     private String url;
     private ObjectMapper objectMapper;
 
@@ -28,15 +26,12 @@ public class BotInviter implements Consumer<HttpResponse> {
             Unirest.post(this.url)
                     .header("Content-Type", "application/json")
                     .body(new JSONObject(jsonBody))
-                    .asEmpty()
-                    .ifFailure(this);
+                    .asJson()
+                    .ifFailure(response -> {
+                        System.out.println("Unirest error! " + response.getStatus());
+                    });
         } catch (JsonProcessingException e) {
             e.printStackTrace();
         }
-    }
-
-    @Override
-    public void accept(HttpResponse httpResponse) {
-        System.out.println("Unirest error! " + httpResponse.getStatus());
     }
 }
