@@ -29,6 +29,7 @@ public class SocketHandler extends TextWebSocketHandler {
     private Map<Battle, List<WebSocketSession>> battleSessions = new ConcurrentHashMap<>();
     private Map<UUID, Battle> battles = new HashMap<>();
     private Battle pendingBattle;
+    private BotInviter botInviter = new BotInviter("http://localhost:8081/invitations");  // TODO env variable
 
     @Override
     public void handleTextMessage(WebSocketSession session, TextMessage message) throws IOException {
@@ -67,7 +68,8 @@ public class SocketHandler extends TextWebSocketHandler {
 
     private void startBattle(WebSocketSession session) throws IOException {
         if(pendingBattle == null) {
-            pendingBattle = createBattle();
+            UUID id = createBattle();
+            pendingBattle = battles.get(id);
         }
 
         joinBattle(session, pendingBattle);
@@ -100,15 +102,18 @@ public class SocketHandler extends TextWebSocketHandler {
         send(session, joinedBattle);
     }
 
-    private void startBotBattle(WebSocketSession session) {
-        System.out.println("startBotBattle");
+    private void startBotBattle(WebSocketSession session) throws IOException {
+       UUID battleId = createBattle();
+       joinBattle(session, battleId);
+       botInviter.invite(battleId);
     }
 
-    private Battle createBattle() {
+    private UUID createBattle() {
         Battle battle = new Battle(2, 10, 10, new int[] {4, 3, 3, 2, 2, 2, 1, 1, 1, 1});
-        battles.put(UUID.randomUUID(), battle);
+        UUID id = UUID.randomUUID();
+        battles.put(id, battle);
         battleSessions.put(battle, Arrays.asList(new WebSocketSession[battle.getPlayerCount()]));
-        return battle;
+        return id;
     }
 
     private int getFreeSession(Battle battle){

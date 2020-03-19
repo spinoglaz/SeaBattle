@@ -582,6 +582,7 @@ ui = {
         this.battleScreen.appendChild(this.battleController.fleets[1].element);
 
         this.startBattleButton.onclick = callbacks.startBattle;
+        this.startBotBattleButton.onclick = callbacks.startBotBattle;
         this.leaveBattleButton.onclick = callbacks.leaveBattle;
         this.placeRandomlyButton.onclick = function() {self.placementController.placeRandomly()};
         this.resetFieldButton.onclick = function() {self.placementController.reset(self.battle)};
@@ -634,6 +635,9 @@ server = {
     startBattle: function() {
         this.send({startBattle: {}});
     },
+    startBotBattle: function() {
+        this.send({startBotBattle: {}});
+    },
     placeShips: function(ships) {
         this.send({placeShips: {ships: ships}});
     },
@@ -661,6 +665,7 @@ game = {
     start: function() {
         ui.start({
             startBattle: this.startBattle,
+            startBotBattle: this.startBotBattle,
             leaveBattle: this.leaveBattle,
             placeShips: this.placeShips,
             shoot: this.shoot,
@@ -698,6 +703,11 @@ game = {
         ui.mainMenuScreen.classList.remove('active');
         ui.showLoader("Waiting for a battle...");
         server.startBattle();
+    },
+    startBotBattle: function() {
+        ui.mainMenuScreen.classList.remove('active');
+        ui.showLoader("Waiting for a battle...");
+        server.startBotBattle();
     },
     leaveBattle: function() {
         ui.battleScreen.classList.remove('active');
