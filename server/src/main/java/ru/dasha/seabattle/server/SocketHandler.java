@@ -28,7 +28,7 @@ public class SocketHandler extends TextWebSocketHandler {
     private Map<WebSocketSession, SessionData> sessions = new ConcurrentHashMap<>();
     private Map<Battle, List<WebSocketSession>> battleSessions = new ConcurrentHashMap<>();
     private Map<UUID, Battle> battles = new HashMap<>();
-    private Battle pendingBattle;
+    private UUID pendingBattleId;
     private BotInviter botInviter;
 
     public SocketHandler(BotInviter botInviter) {
@@ -71,15 +71,14 @@ public class SocketHandler extends TextWebSocketHandler {
     }
 
     private void startBattle(WebSocketSession session) throws IOException {
-        if(pendingBattle == null) {
-            UUID id = createBattle();
-            pendingBattle = battles.get(id);
+        if(pendingBattleId == null) {
+            pendingBattleId = createBattle();
         }
 
-        joinBattle(session, pendingBattle);
+        joinBattle(session, pendingBattleId);
 
-        if(getFreeSession(pendingBattle) == -1) {
-            pendingBattle = null;
+        if(getFreeSession(battles.get(pendingBattleId)) == -1) {
+            pendingBattleId = null;
         }
     }
 
@@ -89,19 +88,16 @@ public class SocketHandler extends TextWebSocketHandler {
             sendErrorMessage(session, "No such battle");
             return;
         }
-        joinBattle(session, battle);
-    }
-
-    private void joinBattle(WebSocketSession session, Battle battle) throws IOException {
         SessionData sessionData = sessions.get(session);
         sessionData.battle = battle;
         sessionData.player = getFreeSession(battle);
         battleSessions.get(sessionData.battle).set(sessionData.player, session);
 
         JoinedBattleEvent joinedBattle = new JoinedBattleEvent();
-        joinedBattle.playerCount = sessionData.battle.getPlayerCount();
-        joinedBattle.fieldSize = sessionData.battle.getFieldSizeX();
-        joinedBattle.shipSizes = sessionData.battle.getShipSizes();
+        joinedBattle.battleId = battleId.toString();
+        joinedBattle.playerCount = battle.getPlayerCount();
+        joinedBattle.fieldSize = battle.getFieldSizeX();
+        joinedBattle.shipSizes = battle.getShipSizes();
         joinedBattle.player = sessionData.player;
         send(session, joinedBattle);
     }
