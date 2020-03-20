@@ -29,7 +29,11 @@ public class SocketHandler extends TextWebSocketHandler {
     private Map<Battle, List<WebSocketSession>> battleSessions = new ConcurrentHashMap<>();
     private Map<UUID, Battle> battles = new HashMap<>();
     private Battle pendingBattle;
-    private BotInviter botInviter = new BotInviter("http://localhost:8081/invitations");  // TODO env variable
+    private BotInviter botInviter;
+
+    public SocketHandler(BotInviter botInviter) {
+        this.botInviter = botInviter;
+    }
 
     @Override
     public void handleTextMessage(WebSocketSession session, TextMessage message) throws IOException {
