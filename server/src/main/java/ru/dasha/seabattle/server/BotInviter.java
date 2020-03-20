@@ -18,12 +18,12 @@ public class BotInviter {
 
     public BotInviter(
             @Value("${botUrl}") String botUrl,
-            @Value("${serverHost}") String serverHost,
-            @Value("${server.port}") int serverPort
+            @Value("${invitationHost}") String invitationHost,
+            @Value("${invitationPort}") int invitationPort
     ) {
         this.botUrl = botUrl;
         this.objectMapper = new ObjectMapper();
-        this.invitationUrl = "ws://" + serverHost + ":" + serverPort + "/ws";
+        this.invitationUrl = "ws://" + invitationHost + ":" + invitationPort + "/ws";
     }
 
     public void invite(UUID battleId) {
