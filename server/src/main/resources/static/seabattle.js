@@ -549,6 +549,7 @@ ui = {
     mainMenuScreen: document.getElementById('mainMenuScreen'),
     startBattleButton: document.getElementById('startBattle'),
     startBotBattleButton: document.getElementById('startBotBattle'),
+    startPrivateBattleButton: document.getElementById('startPrivateBattle'),
     placingShipsScreen: document.getElementById('placingShipsScreen'),
     placeShipsButton: document.getElementById('placeShips'),
     placeRandomlyButton: document.getElementById('placeRandomly'),
@@ -585,23 +586,38 @@ ui = {
         this.battleScreen.appendChild(this.battleController.fleets[0].element);
         this.battleScreen.appendChild(this.battleController.fleets[1].element);
 
-        this.startBattleButton.onclick = callbacks.startBattle;
-        this.startBotBattleButton.onclick = callbacks.startBotBattle;
+        this.startBattleButton.onclick = function() {
+            self.privateBattle = false;
+            callbacks.startBattle();
+        };
+        this.startBotBattleButton.onclick = function() {
+            self.privateBattle = false;
+            callbacks.startBotBattle();
+        };
+        this.startPrivateBattleButton.onclick = function() {
+            self.privateBattle = true;
+            callbacks.startPrivateBattle();
+        };
         this.leaveBattleButton.onclick = callbacks.leaveBattle;
         this.placeRandomlyButton.onclick = function() {self.placementController.placeRandomly()};
         this.resetFieldButton.onclick = function() {self.placementController.reset(self.battle)};
         this.placeShipsButton.onclick = function() {self._placeShips()};
     },
     showLoader: function(text) {
-        ui.loader.classList.add('active');
-        ui.loaderText.textContent = text;
+        this.mainMenuScreen.classList.remove('active');
+        this.loader.classList.add('active');
+        this.loaderText.textContent = text;
     },
     hideLoader: function() {
-        ui.loader.classList.remove('active');
+        this.loader.classList.remove('active');
+    },
+    showMainMenu: function() {
+        this.hideLoader();
+        this.mainMenuScreen.classList.add('active');
     },
     showBattle: function() {
-        ui.placingShipsScreen.classList.remove('active');
-        ui.battleScreen.classList.add('active');
+        this.placingShipsScreen.classList.remove('active');
+        this.battleScreen.classList.add('active');
     },
     joinBattle: function(battle, player) {
         this.battle = battle;
@@ -611,6 +627,12 @@ ui = {
         this.placingShipsScreen.classList.add('active');
         this.placementController.reset(battle);
         this.battleController.reset(battle, player);
+
+        if (this.privateBattle) {
+            const battleUrl = new URL(window.location);
+            battleUrl.searchParams.set('battleId', battle.id);
+            alert('Link to the battle: ' + battleUrl.toString());  // TODO replace with HTML5 modal dialog
+        }
     },
     setBattleState: function(battleState) {
         this.battleController.setBattleState(battleState);
@@ -643,6 +665,12 @@ server = {
     startBotBattle: function() {
         this.send({startBotBattle: {}});
     },
+    startPrivateBattle: function() {
+        this.send({startPrivateBattle: {}});
+    },
+    joinBattle: function(battleId) {
+        this.send({joinBattle: {battleId: battleId}});
+    },
     placeShips: function(ships) {
         this.send({placeShips: {ships: ships}});
     },
@@ -663,6 +691,9 @@ server = {
         if (serverMessage.shot) {
             this.callbacks.shot(serverMessage.shot);
         }
+        if (serverMessage.error) {
+            this.callbacks.error(serverMessage.error);
+        }
     },
 };
 
@@ -671,6 +702,7 @@ game = {
         ui.start({
             startBattle: this.startBattle,
             startBotBattle: this.startBotBattle,
+            startPrivateBattle: this.startPrivateBattle,
             leaveBattle: this.leaveBattle,
             placeShips: this.placeShips,
             shoot: this.shoot,
@@ -681,15 +713,24 @@ game = {
             joinedToBattle: this.onJoinedToBattle,
             battleUpdate: this.onBattleUpdate,
             shot: this.onShot,
+            error: this.onServerError,
         });
     },
     // Server events
     onConnectedToServer: function() {
-        ui.hideLoader();
-        ui.mainMenuScreen.classList.add('active');
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('battleId')) {
+            const battleId = urlParams.get('battleId');
+            ui.showLoader('Joining to the battle...');
+            server.joinBattle(battleId);
+        }
+        else {
+            ui.showMainMenu();
+        }
     },
     onJoinedToBattle: function(joinedBattleEvent) {
         const battle = {
+            id: joinedBattleEvent.battleId,
             playerCount: joinedBattleEvent.playerCount,
             fieldSize: joinedBattleEvent.fieldSize,
             shipSizes: joinedBattleEvent.shipSizes.sort(),
@@ -702,23 +743,25 @@ game = {
     onShot: function(event) {
         ui.shot(event);
     },
+    onServerError: function(message) {
+        ui.showLoader(message);
+        ui.leaveBattleButton.classList.add('revealed');
+    },
     // UI events
     startBattle: function() {
-        ui.mainMenuScreen.classList.remove('active');
         ui.showLoader("Waiting for a battle...");
         server.startBattle();
     },
     startBotBattle: function() {
-        ui.mainMenuScreen.classList.remove('active');
         ui.showLoader("Waiting for a battle...");
         server.startBotBattle();
     },
+    startPrivateBattle: function() {
+        ui.showLoader("Waiting for a battle...");
+        server.startPrivateBattle();
+    },
     leaveBattle: function() {
-        ui.battleScreen.classList.remove('active');
-        ui.placingShipsScreen.classList.remove('active');
-        ui.leaveBattleButton.classList.remove('revealed');
-        ui.showLoader("Connecting to the server...");
-        server.reconnect();
+        window.location = '/';
     },
     placeShips: function(ships) {
         const commandShips = [];

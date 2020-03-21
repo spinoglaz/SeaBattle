@@ -13,16 +13,26 @@ body {
 
 #startBattle {
     position: absolute;
-    width: 50%;
-    left: 25%;
+    width: 30%;
+    height: 60%;
+    left: 35%;
     top: 35%;
 }
 
 #startBotBattle {
     position: absolute;
-    width: 50%;
-    left: 25%;
-    top: 65%;
+    width: 30%;
+    height: 60%;
+    left: 0;
+    top: 35%;
+}
+
+#startPrivateBattle {
+    position: absolute;
+    width: 30%;
+    height: 60%;
+    right: 0;
+    top: 35%;
 }
 
 #leaveBattle {
