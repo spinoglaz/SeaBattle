@@ -185,25 +185,25 @@ body {
 .field-1 {
     position: absolute;
     top: 25%;
-    left: 14%;
+    left: 16%;
 }
 
 .field-2 {
     position: absolute;
     top: 25%;
-    right: 14%;
+    right: 16%;
 }
 
 .fleet-1 {
     position: absolute;
     top: 25%;
-    left: -20%;
+    left: -15%;
 }
 
 .fleet-2 {
     position: absolute;
     top: 25%;
-    right: -20%;
+    right: -15%;
 }
 
 .field-grid {

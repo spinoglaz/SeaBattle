@@ -200,7 +200,7 @@ function Field(size, styleClass) {
         return this.cells[x + y * this.size];
     };
     this._onmousemove = function(e) {
-        const pos = calcGridCoordinates(this.gridElement, e, this.size, this.size)
+        const pos = calcGridCoordinates(this.gridElement, e, this.size, this.size);
         this.mouseX = pos.x;
         this.mouseY = pos.y;
         if (this.onMouseMove) {
@@ -446,7 +446,7 @@ function BattleController(callbacks) {
         this.enemyField.onMouseDown = function(e, x, y) {self.onEnemyFieldMouseDown(self.enemy, x, y)};
         this.fields[this.enemy].onMouseMove = function(x, y) {self._onEnemyFieldMouseMove(x, y)};
         this.fields[this.enemy].gridElement.onmouseleave = function() {self._onEnemyFieldMouseLeave()};
-        this._setBattleStatusText('Waiting for opponent...');
+        this._setBattleStatusText('No opponent');
     };
     this.setPlayerShips = function(ships) {
         for (let i = 0; i < ships.length; ++i) {
