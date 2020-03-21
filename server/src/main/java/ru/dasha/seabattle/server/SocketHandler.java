@@ -100,6 +100,13 @@ public class SocketHandler extends TextWebSocketHandler {
         joinedBattle.shipSizes = battle.getShipSizes();
         joinedBattle.player = sessionData.player;
         send(session, joinedBattle);
+
+        BattleUpdateEvent battleUpdate = createBattleUpdateEvent(battle);
+        for (WebSocketSession battleSession: battleSessions.get(battle)) {
+            if(battleSession != null) {
+                send(battleSession, battleUpdate);
+            }
+        }
     }
 
     private void startBotBattle(WebSocketSession session) throws IOException {
