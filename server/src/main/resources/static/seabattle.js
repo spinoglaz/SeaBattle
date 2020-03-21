@@ -483,7 +483,13 @@ function BattleController(callbacks) {
     this.setBattleState = function(battleState) {
         this.status = battleState.players[this.player];
         const enemyStatus = battleState.players[this.enemy];
-        if (this.status === 'WAITING') {
+        if (enemyStatus === 'NO_PLAYER') {
+            this._setBattleStatusText('No opponent');
+        }
+        else if (enemyStatus === "PLACING_SHIPS") {
+            this._setBattleStatusText('Opponent placing ships');
+        }
+        else if (this.status === 'WAITING') {
             this._setBattleStatusText('Opponent turn');
         }
         else if (this.status === 'SHOOTING') {
@@ -494,9 +500,6 @@ function BattleController(callbacks) {
         }
         else if (this.status === 'LOSER') {
             this._setBattleStatusText('You lose!');
-        }
-        if (enemyStatus === 'NO_PLAYER') {
-            this._setBattleStatusText('No opponent');
         }
     };
     this.shot = function(shot) {
