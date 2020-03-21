@@ -300,6 +300,7 @@ function PlacementController(callbacks) {
         this._grabShip(0);
         this.preview.hide();
         this.preview.setCellSize(this.field.gridElement.offsetWidth / this.field.size);
+        this._setAllPlaced(false);
     };
     this.placeRandomly = function() {
         let x = 0;
@@ -605,6 +606,7 @@ ui = {
     joinBattle: function(battle, player) {
         this.battle = battle;
         this.hideLoader();
+        this.leaveBattleButton.classList.add('revealed');
         this.placeShipsButton.classList.remove('revealed');
         this.placingShipsScreen.classList.add('active');
         this.placementController.reset(battle);
@@ -693,7 +695,6 @@ game = {
             shipSizes: joinedBattleEvent.shipSizes.sort(),
         };
         ui.joinBattle(battle, joinedBattleEvent.player);
-        ui.leaveBattleButton.classList.add('revealed');
     },
     onBattleUpdate: function(event) {
         ui.setBattleState(event);
