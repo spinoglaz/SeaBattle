@@ -2,6 +2,26 @@ function clamp(num, min, max) {
     return Math.min(Math.max(num, min), max);
 }
 
+const copyToClipboard = str => {
+    const el = document.createElement('textarea');  // Create a <textarea> element
+    el.value = str;                                 // Set its value to the string that you want copied
+    el.setAttribute('readonly', '');                // Make it readonly to be tamper-proof
+    el.style.position = 'absolute';
+    el.style.left = '-9999px';                      // Move outside the screen to make it invisible
+    document.body.appendChild(el);                  // Append the <textarea> element to the HTML document
+    const selected =
+        document.getSelection().rangeCount > 0        // Check if there is any content selected previously
+            ? document.getSelection().getRangeAt(0)     // Store selection if found
+            : false;                                    // Mark as false to know no selection existed before
+    el.select();                                    // Select the <textarea> content
+    document.execCommand('copy');                   // Copy - only works as a result of a user action (e.g. click events)
+    document.body.removeChild(el);                  // Remove the <textarea> element
+    if (selected) {                                 // If a selection existed before copying
+        document.getSelection().removeAllRanges();    // Unselect everything on the HTML document
+        document.getSelection().addRange(selected);   // Restore the original selection
+    }
+};
+
 function calcGridCoordinates(element, e, sizeX, sizeY) {
     const bounds = element.getBoundingClientRect();
     const pixelsX = e.pageX - bounds.left;
@@ -11,6 +31,12 @@ function calcGridCoordinates(element, e, sizeX, sizeY) {
     x = clamp(x, 0, sizeX - 1);
     y = clamp(y, 0, sizeY - 1);
     return {x: x, y: y}
+}
+
+function createBattleUrl(battleId) {
+    const battleUrl = new URL(window.location);
+    battleUrl.searchParams.set('battleId', battleId);
+    return battleUrl.toString();
 }
 
 function Ship(size, styleClass) {
@@ -559,6 +585,10 @@ ui = {
     loader: document.getElementById('loader'),
     loaderText: document.getElementById('loaderText'),
     battleScreen: document.getElementById('battleScreen'),
+    modal: document.getElementById("modal"),
+    privateBattleLink: document.getElementById('privateBattleLink'),
+    battleLinkButton: document.getElementById('battleLinkButton'),
+    copyBattleLink: document.getElementById('copyBattleLink'),
     battle: null,
     start: function(callbacks) {
         const self = this;
@@ -602,6 +632,14 @@ ui = {
         this.placeRandomlyButton.onclick = function() {self.placementController.placeRandomly()};
         this.resetFieldButton.onclick = function() {self.placementController.reset(self.battle)};
         this.placeShipsButton.onclick = function() {self._placeShips()};
+        this.battleLinkButton.onclick = function() {self._showBattleLink()};
+        this.copyBattleLink.onclick = function() {copyToClipboard(self.battle.url)};
+
+        this.modal.onclick = function(event) {
+            if (event.target === self.modal) {
+                self.modal.style.display = "none";
+            }
+        }
     },
     showLoader: function(text) {
         this.mainMenuScreen.classList.remove('active');
@@ -629,9 +667,11 @@ ui = {
         this.battleController.reset(battle, player);
 
         if (this.privateBattle) {
-            const battleUrl = new URL(window.location);
-            battleUrl.searchParams.set('battleId', battle.id);
-            alert('Link to the battle: ' + battleUrl.toString());  // TODO replace with HTML5 modal dialog
+            this._showBattleLink();
+            this.battleLinkButton.classList.add('revealed');
+        }
+        else {
+            this.battleLinkButton.classList.remove('revealed');
         }
     },
     setBattleState: function(battleState) {
@@ -644,6 +684,11 @@ ui = {
         this.callbacks.placeShips(this.placementController.placedShips);
         this.showBattle();
         this.battleController.setPlayerShips(this.placementController.placedShips);
+    },
+    _showBattleLink: function(link) {
+        this.privateBattleLink.href = this.battle.url;
+        this.privateBattleLink.textContent = this.battle.url;
+        this.modal.style.display = "block";
     },
 };
 
@@ -731,6 +776,7 @@ game = {
     onJoinedToBattle: function(joinedBattleEvent) {
         const battle = {
             id: joinedBattleEvent.battleId,
+            url: createBattleUrl(joinedBattleEvent.battleId),
             playerCount: joinedBattleEvent.playerCount,
             fieldSize: joinedBattleEvent.fieldSize,
             shipSizes: joinedBattleEvent.shipSizes.sort(),
