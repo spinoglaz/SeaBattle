@@ -18,15 +18,15 @@ import ru.dasha.seabattle.protocol.*;
 
 import java.io.IOException;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
+
 
 @Component
 public class SocketHandler extends TextWebSocketHandler {
 
     private ObjectMapper objectMapper = new ObjectMapper();
 
-    private Map<WebSocketSession, SessionData> sessions = new ConcurrentHashMap<>();
-    private Map<Battle, List<WebSocketSession>> battleSessions = new ConcurrentHashMap<>();
+    private Map<WebSocketSession, SessionData> sessions = new HashMap<>();
+    private Map<Battle, List<WebSocketSession>> battleSessions = new HashMap<>();
     private Map<UUID, Battle> battles = new HashMap<>();
     private UUID pendingBattleId;
     private BotInviter botInviter;
@@ -36,7 +36,7 @@ public class SocketHandler extends TextWebSocketHandler {
     }
 
     @Override
-    public void handleTextMessage(WebSocketSession session, TextMessage message) throws IOException {
+    synchronized public void handleTextMessage(WebSocketSession session, TextMessage message) throws IOException {
         ClientMessage clientMessage = objectMapper.readValue(message.getPayload(), ClientMessage.class);
         if(clientMessage.startBattle != null) {
             startBattle(session);
@@ -60,12 +60,12 @@ public class SocketHandler extends TextWebSocketHandler {
     }
 
     @Override
-    public void afterConnectionEstablished(WebSocketSession session) throws IOException {
+    synchronized public void afterConnectionEstablished(WebSocketSession session) throws IOException {
         sessions.put(session, new SessionData(session));
     }
 
     @Override
-    public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
+    synchronized public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
         SessionData sessionData = sessions.get(session);
         if (sessionData.battle != null) {
             battleSessions.get(sessionData.battle).set(sessionData.player, null);
