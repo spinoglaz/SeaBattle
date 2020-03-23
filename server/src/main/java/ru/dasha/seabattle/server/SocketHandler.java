@@ -44,6 +44,9 @@ public class SocketHandler extends TextWebSocketHandler {
         if(clientMessage.startBotBattle != null) {
             startBotBattle(session);
         }
+        if(clientMessage.startPrivateBattle != null) {
+            startPrivateBattle(session);
+        }
         if(clientMessage.placeShips != null) {
             placeShips(session, clientMessage.placeShips);
         }
@@ -107,6 +110,11 @@ public class SocketHandler extends TextWebSocketHandler {
                 send(battleSession, battleUpdate);
             }
         }
+    }
+
+    private void startPrivateBattle(WebSocketSession session) throws IOException {
+        UUID battleId = createBattle();
+        joinBattle(session, battleId);
     }
 
     private void startBotBattle(WebSocketSession session) throws IOException {
