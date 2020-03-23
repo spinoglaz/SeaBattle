@@ -2,6 +2,26 @@ function clamp(num, min, max) {
     return Math.min(Math.max(num, min), max);
 }
 
+const copyToClipboard = str => {
+    const el = document.createElement('textarea');  // Create a <textarea> element
+    el.value = str;                                 // Set its value to the string that you want copied
+    el.setAttribute('readonly', '');                // Make it readonly to be tamper-proof
+    el.style.position = 'absolute';
+    el.style.left = '-9999px';                      // Move outside the screen to make it invisible
+    document.body.appendChild(el);                  // Append the <textarea> element to the HTML document
+    const selected =
+        document.getSelection().rangeCount > 0        // Check if there is any content selected previously
+            ? document.getSelection().getRangeAt(0)     // Store selection if found
+            : false;                                    // Mark as false to know no selection existed before
+    el.select();                                    // Select the <textarea> content
+    document.execCommand('copy');                   // Copy - only works as a result of a user action (e.g. click events)
+    document.body.removeChild(el);                  // Remove the <textarea> element
+    if (selected) {                                 // If a selection existed before copying
+        document.getSelection().removeAllRanges();    // Unselect everything on the HTML document
+        document.getSelection().addRange(selected);   // Restore the original selection
+    }
+};
+
 function calcGridCoordinates(element, e, sizeX, sizeY) {
     const bounds = element.getBoundingClientRect();
     const pixelsX = e.pageX - bounds.left;
@@ -11,6 +31,12 @@ function calcGridCoordinates(element, e, sizeX, sizeY) {
     x = clamp(x, 0, sizeX - 1);
     y = clamp(y, 0, sizeY - 1);
     return {x: x, y: y}
+}
+
+function createBattleUrl(battleId) {
+    const battleUrl = new URL(window.location);
+    battleUrl.searchParams.set('battleId', battleId);
+    return battleUrl.toString();
 }
 
 function Ship(size, styleClass) {
@@ -200,7 +226,7 @@ function Field(size, styleClass) {
         return this.cells[x + y * this.size];
     };
     this._onmousemove = function(e) {
-        const pos = calcGridCoordinates(this.gridElement, e, this.size, this.size)
+        const pos = calcGridCoordinates(this.gridElement, e, this.size, this.size);
         this.mouseX = pos.x;
         this.mouseY = pos.y;
         if (this.onMouseMove) {
@@ -300,6 +326,7 @@ function PlacementController(callbacks) {
         this._grabShip(0);
         this.preview.hide();
         this.preview.setCellSize(this.field.gridElement.offsetWidth / this.field.size);
+        this._setAllPlaced(false);
     };
     this.placeRandomly = function() {
         let x = 0;
@@ -446,7 +473,7 @@ function BattleController(callbacks) {
         this.enemyField.onMouseDown = function(e, x, y) {self.onEnemyFieldMouseDown(self.enemy, x, y)};
         this.fields[this.enemy].onMouseMove = function(x, y) {self._onEnemyFieldMouseMove(x, y)};
         this.fields[this.enemy].gridElement.onmouseleave = function() {self._onEnemyFieldMouseLeave()};
-        this._setBattleStatusText('Waiting for opponent...');
+        this._setBattleStatusText('No opponent');
     };
     this.setPlayerShips = function(ships) {
         for (let i = 0; i < ships.length; ++i) {
@@ -483,7 +510,13 @@ function BattleController(callbacks) {
     this.setBattleState = function(battleState) {
         this.status = battleState.players[this.player];
         const enemyStatus = battleState.players[this.enemy];
-        if (this.status === 'WAITING') {
+        if (enemyStatus === 'NO_PLAYER') {
+            this._setBattleStatusText('No opponent');
+        }
+        else if (enemyStatus === "PLACING_SHIPS") {
+            this._setBattleStatusText('Opponent placing ships');
+        }
+        else if (this.status === 'WAITING') {
             this._setBattleStatusText('Opponent turn');
         }
         else if (this.status === 'SHOOTING') {
@@ -494,9 +527,6 @@ function BattleController(callbacks) {
         }
         else if (this.status === 'LOSER') {
             this._setBattleStatusText('You lose!');
-        }
-        if (enemyStatus === 'NO_PLAYER') {
-            this._setBattleStatusText('No opponent');
         }
     };
     this.shot = function(shot) {
@@ -545,6 +575,7 @@ ui = {
     mainMenuScreen: document.getElementById('mainMenuScreen'),
     startBattleButton: document.getElementById('startBattle'),
     startBotBattleButton: document.getElementById('startBotBattle'),
+    startPrivateBattleButton: document.getElementById('startPrivateBattle'),
     placingShipsScreen: document.getElementById('placingShipsScreen'),
     placeShipsButton: document.getElementById('placeShips'),
     placeRandomlyButton: document.getElementById('placeRandomly'),
@@ -554,6 +585,10 @@ ui = {
     loader: document.getElementById('loader'),
     loaderText: document.getElementById('loaderText'),
     battleScreen: document.getElementById('battleScreen'),
+    modal: document.getElementById("modal"),
+    privateBattleLink: document.getElementById('privateBattleLink'),
+    battleLinkButton: document.getElementById('battleLinkButton'),
+    copyBattleLink: document.getElementById('copyBattleLink'),
     battle: null,
     start: function(callbacks) {
         const self = this;
@@ -581,31 +616,63 @@ ui = {
         this.battleScreen.appendChild(this.battleController.fleets[0].element);
         this.battleScreen.appendChild(this.battleController.fleets[1].element);
 
-        this.startBattleButton.onclick = callbacks.startBattle;
-        this.startBotBattleButton.onclick = callbacks.startBotBattle;
+        this.startBattleButton.onclick = function() {
+            self.privateBattle = false;
+            callbacks.startBattle();
+        };
+        this.startBotBattleButton.onclick = function() {
+            self.privateBattle = false;
+            callbacks.startBotBattle();
+        };
+        this.startPrivateBattleButton.onclick = function() {
+            self.privateBattle = true;
+            callbacks.startPrivateBattle();
+        };
         this.leaveBattleButton.onclick = callbacks.leaveBattle;
         this.placeRandomlyButton.onclick = function() {self.placementController.placeRandomly()};
         this.resetFieldButton.onclick = function() {self.placementController.reset(self.battle)};
         this.placeShipsButton.onclick = function() {self._placeShips()};
+        this.battleLinkButton.onclick = function() {self._showBattleLink()};
+        this.copyBattleLink.onclick = function() {copyToClipboard(self.battle.url)};
+
+        this.modal.onclick = function(event) {
+            if (event.target === self.modal) {
+                self.modal.style.display = "none";
+            }
+        }
     },
     showLoader: function(text) {
-        ui.loader.classList.add('active');
-        ui.loaderText.textContent = text;
+        this.mainMenuScreen.classList.remove('active');
+        this.loader.classList.add('active');
+        this.loaderText.textContent = text;
     },
     hideLoader: function() {
-        ui.loader.classList.remove('active');
+        this.loader.classList.remove('active');
+    },
+    showMainMenu: function() {
+        this.hideLoader();
+        this.mainMenuScreen.classList.add('active');
     },
     showBattle: function() {
-        ui.placingShipsScreen.classList.remove('active');
-        ui.battleScreen.classList.add('active');
+        this.placingShipsScreen.classList.remove('active');
+        this.battleScreen.classList.add('active');
     },
     joinBattle: function(battle, player) {
         this.battle = battle;
         this.hideLoader();
+        this.leaveBattleButton.classList.add('revealed');
         this.placeShipsButton.classList.remove('revealed');
         this.placingShipsScreen.classList.add('active');
         this.placementController.reset(battle);
         this.battleController.reset(battle, player);
+
+        if (this.privateBattle) {
+            this._showBattleLink();
+            this.battleLinkButton.classList.add('revealed');
+        }
+        else {
+            this.battleLinkButton.classList.remove('revealed');
+        }
     },
     setBattleState: function(battleState) {
         this.battleController.setBattleState(battleState);
@@ -617,6 +684,11 @@ ui = {
         this.callbacks.placeShips(this.placementController.placedShips);
         this.showBattle();
         this.battleController.setPlayerShips(this.placementController.placedShips);
+    },
+    _showBattleLink: function(link) {
+        this.privateBattleLink.href = this.battle.url;
+        this.privateBattleLink.textContent = this.battle.url;
+        this.modal.style.display = "block";
     },
 };
 
@@ -638,6 +710,12 @@ server = {
     startBotBattle: function() {
         this.send({startBotBattle: {}});
     },
+    startPrivateBattle: function() {
+        this.send({startPrivateBattle: {}});
+    },
+    joinBattle: function(battleId) {
+        this.send({joinBattle: {battleId: battleId}});
+    },
     placeShips: function(ships) {
         this.send({placeShips: {ships: ships}});
     },
@@ -658,6 +736,9 @@ server = {
         if (serverMessage.shot) {
             this.callbacks.shot(serverMessage.shot);
         }
+        if (serverMessage.error) {
+            this.callbacks.error(serverMessage.error);
+        }
     },
 };
 
@@ -666,6 +747,7 @@ game = {
         ui.start({
             startBattle: this.startBattle,
             startBotBattle: this.startBotBattle,
+            startPrivateBattle: this.startPrivateBattle,
             leaveBattle: this.leaveBattle,
             placeShips: this.placeShips,
             shoot: this.shoot,
@@ -676,21 +758,30 @@ game = {
             joinedToBattle: this.onJoinedToBattle,
             battleUpdate: this.onBattleUpdate,
             shot: this.onShot,
+            error: this.onServerError,
         });
     },
     // Server events
     onConnectedToServer: function() {
-        ui.hideLoader();
-        ui.mainMenuScreen.classList.add('active');
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('battleId')) {
+            const battleId = urlParams.get('battleId');
+            ui.showLoader('Joining to the battle...');
+            server.joinBattle(battleId);
+        }
+        else {
+            ui.showMainMenu();
+        }
     },
     onJoinedToBattle: function(joinedBattleEvent) {
         const battle = {
+            id: joinedBattleEvent.battleId,
+            url: createBattleUrl(joinedBattleEvent.battleId),
             playerCount: joinedBattleEvent.playerCount,
             fieldSize: joinedBattleEvent.fieldSize,
             shipSizes: joinedBattleEvent.shipSizes.sort(),
         };
         ui.joinBattle(battle, joinedBattleEvent.player);
-        ui.leaveBattleButton.classList.add('revealed');
     },
     onBattleUpdate: function(event) {
         ui.setBattleState(event);
@@ -698,23 +789,25 @@ game = {
     onShot: function(event) {
         ui.shot(event);
     },
+    onServerError: function(message) {
+        ui.showLoader(message);
+        ui.leaveBattleButton.classList.add('revealed');
+    },
     // UI events
     startBattle: function() {
-        ui.mainMenuScreen.classList.remove('active');
         ui.showLoader("Waiting for a battle...");
         server.startBattle();
     },
     startBotBattle: function() {
-        ui.mainMenuScreen.classList.remove('active');
         ui.showLoader("Waiting for a battle...");
         server.startBotBattle();
     },
+    startPrivateBattle: function() {
+        ui.showLoader("Waiting for a battle...");
+        server.startPrivateBattle();
+    },
     leaveBattle: function() {
-        ui.battleScreen.classList.remove('active');
-        ui.placingShipsScreen.classList.remove('active');
-        ui.leaveBattleButton.classList.remove('revealed');
-        ui.showLoader("Connecting to the server...");
-        server.reconnect();
+        window.location = '/';
     },
     placeShips: function(ships) {
         const commandShips = [];

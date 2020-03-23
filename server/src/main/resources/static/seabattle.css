@@ -13,21 +13,39 @@ body {
 
 #startBattle {
     position: absolute;
-    width: 50%;
-    left: 25%;
+    width: 30%;
+    height: 60%;
+    left: 35%;
     top: 35%;
 }
 
 #startBotBattle {
     position: absolute;
-    width: 50%;
-    left: 25%;
-    top: 65%;
+    width: 30%;
+    height: 60%;
+    left: 0;
+    top: 35%;
+}
+
+#startPrivateBattle {
+    position: absolute;
+    width: 30%;
+    height: 60%;
+    right: 0;
+    top: 35%;
 }
 
 #leaveBattle {
     position: absolute;
     left: 32px;
+    top: 32px;
+    padding-left: 32px;
+    padding-right: 32px;
+}
+
+#battleLinkButton {
+    position: absolute;
+    right: 32px;
     top: 32px;
     padding-left: 32px;
     padding-right: 32px;
@@ -65,6 +83,55 @@ body {
     right: 0;
     bottom: 0;
     top: 0;
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1;
+    padding-top: 300px;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+.modal-content {
+    display: flex;
+    align-items: center;
+    justify-items: center;
+    flex-direction: column;
+    position: relative;
+    background-color: #55A4E9;
+    margin: auto;
+    padding: 48px 16px;
+    border: 3px solid white;
+    border-radius: 8px;
+    width: 60%;
+    box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2),0 6px 20px 0 rgba(0, 0, 0, 0.19);
+    animation-name: drop-modal;
+    animation-duration: 0.3s;
+}
+
+@keyframes drop-modal {
+    from {top:-300px; opacity:0}
+    to {top:0; opacity:1}
+}
+
+.modal h1 {
+    font: bold 60px/1 "Bungee", sans-serif;
+    color: white;
+    text-shadow: 2px 3px #288ce3;
+    margin-top: 8px;
+    margin-bottom: 32px;
+}
+
+.modal a {
+    font: 24px/1 "Bungee", sans-serif;
+    color: white;
+    margin-bottom: 32px;
 }
 
 .button-1 {
@@ -139,7 +206,7 @@ body {
     width: 100%;
     text-align: center;
     color: white;
-    font: bold 80px/1 "Bungee", sans-serif;
+    font: bold 70px/1 "Bungee", sans-serif;
     text-shadow: 1px 2px #288ce3, 2px 4px #288ce3, 3px 6px #288ce3, 4px 8px #288ce3, 5px 10px #288ce3;
     letter-spacing: 4px;
 }
@@ -185,25 +252,25 @@ body {
 .field-1 {
     position: absolute;
     top: 25%;
-    left: 14%;
+    left: 16%;
 }
 
 .field-2 {
     position: absolute;
     top: 25%;
-    right: 14%;
+    right: 16%;
 }
 
 .fleet-1 {
     position: absolute;
     top: 25%;
-    left: -20%;
+    left: -15%;
 }
 
 .fleet-2 {
     position: absolute;
     top: 25%;
-    right: -20%;
+    right: -15%;
 }
 
 .field-grid {
