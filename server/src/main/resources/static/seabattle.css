@@ -89,7 +89,6 @@ body {
     display: none;
     position: fixed;
     z-index: 1;
-    padding-top: 300px;
     left: 0;
     top: 0;
     width: 100%;
@@ -99,11 +98,14 @@ body {
 }
 
 .modal-content {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
     display: flex;
     align-items: center;
     justify-items: center;
     flex-direction: column;
-    position: relative;
     background-color: #55A4E9;
     margin: auto;
     padding: 48px 16px;
@@ -116,8 +118,8 @@ body {
 }
 
 @keyframes drop-modal {
-    from {top:-300px; opacity:0}
-    to {top:0; opacity:1}
+    from {transform: translate(-50%, -100%); opacity:0}
+    to {transform: translate(-50%, -50%); opacity:1}
 }
 
 .modal h1 {
