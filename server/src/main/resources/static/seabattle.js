@@ -453,6 +453,7 @@ function BattleController(callbacks) {
         new Fleet([]),
     ];
     this.targetCell = null;
+    this.waitServer = false;
 
     this.reset = function(battle, player) {
         this.battle = battle;
@@ -477,6 +478,7 @@ function BattleController(callbacks) {
         this.fields[this.enemy].onMouseMove = function(x, y) {self._onEnemyFieldMouseMove(x, y)};
         this.fields[this.enemy].gridElement.onmouseleave = function() {self._onEnemyFieldMouseLeave()};
         this._setBattleStatusText('No opponent');
+        this.waitServer = false;
     };
     this.setPlayerShips = function(ships) {
         for (let i = 0; i < ships.length; ++i) {
@@ -485,15 +487,16 @@ function BattleController(callbacks) {
         }
     };
     this.onEnemyFieldMouseDown = function(e, x, y) {
-        if (this.status === 'SHOOTING') {
+        if (this.status === 'SHOOTING' && !this.waitServer) {
             callbacks.shoot(self.enemy, x, y);
+            this.waitServer = true;
         }
     };
     this._onEnemyFieldMouseMove = function(x, y) {
         if (this.targetCell != null) {
             this.targetCell.classList.remove('targeted');
         }
-        if (this.status === 'SHOOTING') {
+        if (this.status === 'SHOOTING' && !this.waitServer) {
             this.targetCell = self.enemyField.getCell(x, y);
             this.targetCell.classList.add('targeted');
         }
@@ -511,6 +514,7 @@ function BattleController(callbacks) {
             this.battleStatusElement.classList.remove('active');
     };
     this.setBattleState = function(battleState) {
+        this.waitServer = false;
         this.status = battleState.players[this.player];
         const enemyStatus = battleState.players[this.enemy];
         if (enemyStatus === 'NO_PLAYER') {
