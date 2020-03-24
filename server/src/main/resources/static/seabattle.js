@@ -311,6 +311,7 @@ function PlacementController(callbacks) {
     };
 
     this.reset = function(battle) {
+        this.battle = battle;
         this.field.reset(battle.fieldSize);
         this.fleet.reset(battle.shipSizes);
         this.placedShips = [];
@@ -329,6 +330,7 @@ function PlacementController(callbacks) {
         this._setAllPlaced(false);
     };
     this.placeRandomly = function() {
+        this.reset(this.battle);
         let x = 0;
         let y = 0;
         for (let i = 0; i < this.fleet.size; ++i) {
@@ -382,6 +384,7 @@ function PlacementController(callbacks) {
         }
     };
     this._placeCurrentShip = function() {
+        if (this.allPlaced) return;
         if (this.grabIndex === null) return;
         if (this.preview.invalid) return;
         const x = this.preview.x;
