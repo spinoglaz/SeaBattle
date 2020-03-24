@@ -1,12 +1,13 @@
 package ru.dasha.seabattle.server;
 
 import org.springframework.web.socket.WebSocketSession;
-import ru.dasha.seabattle.engine.Battle;
+
+import java.util.UUID;
 
 public class SessionData {
 
     public WebSocketSession session;
-    public Battle battle;
+    public UUID battleId;
     public int player;
 
     public SessionData(WebSocketSession session) {
