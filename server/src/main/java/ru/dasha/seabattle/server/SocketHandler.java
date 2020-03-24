@@ -26,7 +26,7 @@ public class SocketHandler extends TextWebSocketHandler {
     private ObjectMapper objectMapper = new ObjectMapper();
 
     private Map<WebSocketSession, SessionData> sessions = new HashMap<>();
-    private Map<Battle, List<WebSocketSession>> battleSessions = new HashMap<>();
+    private Map<UUID, List<WebSocketSession>> battleSessions = new HashMap<>();
     private Map<UUID, Battle> battles = new HashMap<>();
     private UUID pendingBattleId;
     private BotInviter botInviter;
@@ -67,11 +67,32 @@ public class SocketHandler extends TextWebSocketHandler {
     @Override
     synchronized public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
         SessionData sessionData = sessions.get(session);
-        if (sessionData.battle != null) {
-            battleSessions.get(sessionData.battle).set(sessionData.player, null);
+        if (sessionData.battleId != null) {
+            battleSessions.get(sessionData.battleId).set(sessionData.player, null);
+            if(isBattleEmpty(sessionData.battleId)) {
+                removeBattle(sessionData.battleId);
+            }
         }
         sessions.remove(session);
     }
+
+    private void removeBattle(UUID battleId) {
+        battles.remove(battleId);
+        battleSessions.remove(battleId);
+        if(pendingBattleId.equals(battleId)) {
+            pendingBattleId = null;
+        }
+    }
+
+    private boolean isBattleEmpty(UUID battleId) {
+        for (WebSocketSession session : battleSessions.get(battleId)) {
+            if(session != null) {
+                return false;
+            }
+        }
+        return true;
+    }
+
 
     private void startBattle(WebSocketSession session) throws IOException {
         if(pendingBattleId == null) {
@@ -80,7 +101,7 @@ public class SocketHandler extends TextWebSocketHandler {
 
         joinBattle(session, pendingBattleId);
 
-        if(getFreeSession(battles.get(pendingBattleId)) == -1) {
+        if(getFreeSession(pendingBattleId) == -1) {
             pendingBattleId = null;
         }
     }
@@ -92,9 +113,9 @@ public class SocketHandler extends TextWebSocketHandler {
             return;
         }
         SessionData sessionData = sessions.get(session);
-        sessionData.battle = battle;
-        sessionData.player = getFreeSession(battle);
-        battleSessions.get(sessionData.battle).set(sessionData.player, session);
+        sessionData.battleId = battleId;
+        sessionData.player = getFreeSession(battleId);
+        battleSessions.get(sessionData.battleId).set(sessionData.player, session);
 
         JoinedBattleEvent joinedBattle = new JoinedBattleEvent();
         joinedBattle.battleId = battleId.toString();
@@ -104,8 +125,8 @@ public class SocketHandler extends TextWebSocketHandler {
         joinedBattle.player = sessionData.player;
         send(session, joinedBattle);
 
-        BattleUpdateEvent battleUpdate = createBattleUpdateEvent(battle);
-        for (WebSocketSession battleSession: battleSessions.get(battle)) {
+        BattleUpdateEvent battleUpdate = createBattleUpdateEvent(sessionData.battleId);
+        for (WebSocketSession battleSession: battleSessions.get(battleId)) {
             if(battleSession != null) {
                 send(battleSession, battleUpdate);
             }
@@ -127,12 +148,12 @@ public class SocketHandler extends TextWebSocketHandler {
         Battle battle = new Battle(2, 10, 10, new int[] {4, 3, 3, 2, 2, 2, 1, 1, 1, 1});
         UUID id = UUID.randomUUID();
         battles.put(id, battle);
-        battleSessions.put(battle, Arrays.asList(new WebSocketSession[battle.getPlayerCount()]));
+        battleSessions.put(id, Arrays.asList(new WebSocketSession[battle.getPlayerCount()]));
         return id;
     }
 
-    private int getFreeSession(Battle battle){
-        List<WebSocketSession> sessions = battleSessions.get(battle);
+    private int getFreeSession(UUID battleId){
+        List<WebSocketSession> sessions = battleSessions.get(battleId);
         for (int i = 0; i < sessions.size(); i++) {
             if(sessions.get(i) == null) {
                 return i;
@@ -143,7 +164,7 @@ public class SocketHandler extends TextWebSocketHandler {
 
     private void placeShips(WebSocketSession session, PlaceShipsCommand placeShips) throws IOException {
         SessionData sessionData = sessions.get(session);
-        Battle battle = sessionData.battle;
+        Battle battle = battles.get(sessionData.battleId);
         if(battle == null) {
             sendErrorMessage(session, "You're not in battle");
             return;
@@ -166,8 +187,8 @@ public class SocketHandler extends TextWebSocketHandler {
             sendErrorMessage(session, "ShipPlacementException");
             return;
         }
-        BattleUpdateEvent battleUpdate = createBattleUpdateEvent(battle);
-        for (WebSocketSession battleSession: battleSessions.get(battle)) {
+        BattleUpdateEvent battleUpdate = createBattleUpdateEvent(sessionData.battleId);
+        for (WebSocketSession battleSession: battleSessions.get(sessionData.battleId)) {
             if(battleSession != null) {
                 send(battleSession, battleUpdate);
             }
@@ -176,7 +197,7 @@ public class SocketHandler extends TextWebSocketHandler {
 
     private void shoot(WebSocketSession session, ShootCommand shoot) throws IOException {
         SessionData sessionData = sessions.get(session);
-        Battle battle = sessionData.battle;
+        Battle battle = battles.get(sessionData.battleId);
         ShootResult shootResult;
         try {
             shootResult = battle.shoot(sessionData.player, shoot.target, shoot.x, shoot.y);
@@ -187,7 +208,7 @@ public class SocketHandler extends TextWebSocketHandler {
             sendErrorMessage(session, "WrongTargetException");
             return;
         }
-        BattleUpdateEvent battleUpdate = createBattleUpdateEvent(battle);
+        BattleUpdateEvent battleUpdate = createBattleUpdateEvent(sessionData.battleId);
         ShotEvent shotEvent = new ShotEvent();
         shotEvent.x = shoot.x;
         shotEvent.y = shoot.y;
@@ -210,7 +231,7 @@ public class SocketHandler extends TextWebSocketHandler {
 
                 break;
         }
-        for (WebSocketSession battleSession: battleSessions.get(battle)) {
+        for (WebSocketSession battleSession: battleSessions.get(sessionData.battleId)) {
             send(battleSession, shotEvent);
             send(battleSession, battleUpdate);
         }
@@ -225,8 +246,9 @@ public class SocketHandler extends TextWebSocketHandler {
         return shipDTO;
     }
 
-    private BattleUpdateEvent createBattleUpdateEvent(Battle battle) {
+    private BattleUpdateEvent createBattleUpdateEvent(UUID battleId) {
         BattleUpdateEvent battleUpdate = new BattleUpdateEvent();
+        Battle battle = battles.get(battleId);
         switch (battle.getStatus()) {
             case PLACING_SHIPS:
                 battleUpdate.status = BattleStatusDTO.PLACING_SHIPS;
@@ -238,7 +260,7 @@ public class SocketHandler extends TextWebSocketHandler {
                 battleUpdate.status = BattleStatusDTO.FINISHED;
                 break;
         }
-        List<WebSocketSession> sessions = battleSessions.get(battle);
+        List<WebSocketSession> sessions = battleSessions.get(battleId);
         battleUpdate.players = new PlayerStatusDTO[battle.getPlayerCount()];
         for (int i = 0; i < battle.getPlayerCount(); i++) {
             if (sessions.get(i) == null) {
