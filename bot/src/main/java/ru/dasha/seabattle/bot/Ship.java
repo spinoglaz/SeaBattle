@@ -12,6 +12,7 @@ public class Ship {
         }
         return 1;
     }
+
     public int getSizeY() {
         if(vertical) {
             return size;
