@@ -2,6 +2,13 @@ function clamp(num, min, max) {
     return Math.min(Math.max(num, min), max);
 }
 
+function shuffle(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+        let j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+}
+
 const copyToClipboard = str => {
     const el = document.createElement('textarea');  // Create a <textarea> element
     el.value = str;                                 // Set its value to the string that you want copied
@@ -200,13 +207,13 @@ function Field(size, styleClass) {
         this.ships.splice(index, 1);
         this.element.removeChild(ship.element);
     };
-    this.canFit = function(ship) {
-        const x = ship.x;
-        const y = ship.y;
+    this.canFit = function(x, y, size, vertical) {
         if (x < 0) return false;
         if (y < 0) return false;
-        const right = x + ship.getSizeX() - 1;
-        const bottom = y + ship.getSizeY() - 1;
+        const sizeX = vertical ? 1 : size;
+        const sizeY = vertical ? size : 1;
+        const right = x + sizeX - 1;
+        const bottom = y + sizeY - 1;
         if (right >= this.size) return false;
         if (bottom >= this.size) return false;
         for (let i = 0; i < this.ships.length; ++i) {
@@ -219,6 +226,9 @@ function Field(size, styleClass) {
                 return false;
         }
         return true;
+    };
+    this.canFitShip = function(ship) {
+        return this.canFit(ship.x, ship.y, ship.size, ship.vertical);
     };
     this.getCell = function(x, y) {
         if (x < 0 || x >= this.size) return null;
@@ -311,6 +321,7 @@ function PlacementController(callbacks) {
     };
 
     this.reset = function(battle) {
+        this.battle = battle;
         this.field.reset(battle.fieldSize);
         this.fleet.reset(battle.shipSizes);
         this.placedShips = [];
@@ -327,20 +338,43 @@ function PlacementController(callbacks) {
         this.preview.hide();
         this.preview.setCellSize(this.field.gridElement.offsetWidth / this.field.size);
         this._setAllPlaced(false);
+        this._randomPositions = [];
+        for (let x = 0; x < this.field.size; ++x) {
+            for (let y = 0; y < this.field.size; ++y) {
+                this._randomPositions.push({
+                    x: x,
+                    y: y,
+                    vertical: true,
+                });
+                this._randomPositions.push({
+                    x: x,
+                    y: y,
+                    vertical: false,
+                });
+            }
+        }
+        shuffle(this._randomPositions);
     };
     this.placeRandomly = function() {
-        let x = 0;
-        let y = 0;
-        for (let i = 0; i < this.fleet.size; ++i) {
-            const fleetShip = this.fleet.ships[i];
-            if (x + fleetShip.size > this.field.size) {
-                x = 0;
-                y += 2;
-            }
-            this._placeShip(i, x, y, false);
-            x += fleetShip.size + 1;
+        this.reset(this.battle);
+        // Place large ships first
+        for (let i = this.fleet.size - 1; i >= 0; --i) {
+            this._placeShipRandomly(i);
         }
         this._setAllPlaced(true);
+    };
+    this._placeShipRandomly = function(shipIndex) {
+        const fleetShip = this.fleet.ships[shipIndex];
+        for (let i = 0; i < this._randomPositions.length; ++i) {
+            const pos = this._randomPositions[i];
+            const x = pos.x;
+            const y = pos.y;
+            const vertical = pos.vertical;
+            if (this.field.canFit(x, y, fleetShip.size, vertical)) {
+                this._placeShip(shipIndex, x, y, vertical);
+                return;
+            }
+        }
     };
     this._onGridMouseMove = function(x, y) {
         if (!this.allPlaced) {
@@ -382,6 +416,7 @@ function PlacementController(callbacks) {
         }
     };
     this._placeCurrentShip = function() {
+        if (this.allPlaced) return;
         if (this.grabIndex === null) return;
         if (this.preview.invalid) return;
         const x = this.preview.x;
@@ -428,7 +463,7 @@ function PlacementController(callbacks) {
         this._validatePreview();
     };
     this._validatePreview = function() {
-        const isValid = this.field.canFit(this.preview);
+        const isValid = this.field.canFitShip(this.preview);
         this.preview.setInvalid(!isValid);
     };
     this._setAllPlaced = function(allPlaced) {
@@ -450,6 +485,7 @@ function BattleController(callbacks) {
         new Fleet([]),
     ];
     this.targetCell = null;
+    this.waitServer = false;
 
     this.reset = function(battle, player) {
         this.battle = battle;
@@ -474,6 +510,7 @@ function BattleController(callbacks) {
         this.fields[this.enemy].onMouseMove = function(x, y) {self._onEnemyFieldMouseMove(x, y)};
         this.fields[this.enemy].gridElement.onmouseleave = function() {self._onEnemyFieldMouseLeave()};
         this._setBattleStatusText('No opponent');
+        this.waitServer = false;
     };
     this.setPlayerShips = function(ships) {
         for (let i = 0; i < ships.length; ++i) {
@@ -482,15 +519,16 @@ function BattleController(callbacks) {
         }
     };
     this.onEnemyFieldMouseDown = function(e, x, y) {
-        if (this.status === 'SHOOTING') {
+        if (this.status === 'SHOOTING' && !this.waitServer) {
             callbacks.shoot(self.enemy, x, y);
+            this.waitServer = true;
         }
     };
     this._onEnemyFieldMouseMove = function(x, y) {
         if (this.targetCell != null) {
             this.targetCell.classList.remove('targeted');
         }
-        if (this.status === 'SHOOTING') {
+        if (this.status === 'SHOOTING' && !this.waitServer) {
             this.targetCell = self.enemyField.getCell(x, y);
             this.targetCell.classList.add('targeted');
         }
@@ -508,6 +546,7 @@ function BattleController(callbacks) {
             this.battleStatusElement.classList.remove('active');
     };
     this.setBattleState = function(battleState) {
+        this.waitServer = false;
         this.status = battleState.players[this.player];
         const enemyStatus = battleState.players[this.enemy];
         if (enemyStatus === 'NO_PLAYER') {
