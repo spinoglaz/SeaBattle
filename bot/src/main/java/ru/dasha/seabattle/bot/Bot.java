@@ -11,11 +11,11 @@ import java.util.List;
 
 public class Bot extends TextWebSocketHandler {
     private PlacementStrategy placementStrategy;
-    private ShootStrategy shootStrategy;
+    private ShootingStrategy shootingStrategy;
     private ObjectMapper objectMapper;
 
     private String battleId;
-    private Field[] fields;
+    private ShootingField[] fields;
     private int player;
     private int enemyPlayer;
 
@@ -23,7 +23,7 @@ public class Bot extends TextWebSocketHandler {
         this.battleId = battleId;
         objectMapper = new ObjectMapper();
         placementStrategy = new PlacementStrategy();
-        shootStrategy = new ShootStrategy();
+        shootingStrategy = new ShootingStrategy();
     }
 
     @Override
@@ -36,9 +36,9 @@ public class Bot extends TextWebSocketHandler {
     protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
         ServerMessage serverMessage = objectMapper.readValue(message.getPayload(), ServerMessage.class);
         if(serverMessage.joinedToBattle != null) {
-            fields = new Field[serverMessage.joinedToBattle.playerCount];
+            fields = new ShootingField[serverMessage.joinedToBattle.playerCount];
             for (int i = 0; i < fields.length; i++) {
-                fields[i] = new Field(serverMessage.joinedToBattle.fieldSize);
+                fields[i] = new ShootingField(serverMessage.joinedToBattle.fieldSize);
             }
             player = serverMessage.joinedToBattle.player;
             enemyPlayer = player == 0 ? 1 : 0;
@@ -46,7 +46,7 @@ public class Bot extends TextWebSocketHandler {
             placeShips(session, ships);
         }
         if(serverMessage.shot != null) {
-            Field field = fields[serverMessage.shot.target];
+            ShootingField field = fields[serverMessage.shot.target];
             if(serverMessage.shot.result == ShootResultDTO.MISS) {
                 field.miss(serverMessage.shot.x, serverMessage.shot.y);
             }
@@ -59,7 +59,7 @@ public class Bot extends TextWebSocketHandler {
             }
         }
         if(serverMessage.battleUpdate != null && serverMessage.battleUpdate.players[player] == PlayerStatusDTO.SHOOTING) {
-            Shot shot = shootStrategy.shoot(fields[enemyPlayer]);
+            Shot shot = shootingStrategy.shoot(fields[enemyPlayer]);
             shoot(session, shot);
         }
         if(serverMessage.battleUpdate != null && serverMessage.battleUpdate.status == BattleStatusDTO.FINISHED) {

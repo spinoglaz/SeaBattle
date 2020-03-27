@@ -1,6 +1,6 @@
 package ru.dasha.seabattle.bot;
 
-public class Field {
+public class ShootingField {
     public enum Cell {
         UNCHARTED,
         EMPTY,
@@ -10,7 +10,7 @@ public class Field {
     private Cell[][] cells;
     private int size;
 
-    public Field(int size) {
+    public ShootingField(int size) {
         this.size = size;
         cells = new Cell[size][size];
         for (int i = 0; i < cells.length; i++) {
