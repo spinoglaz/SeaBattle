@@ -1,20 +1,33 @@
 package ru.dasha.seabattle.bot;
 
 public class PlacementField {
-    private final int PADDING = 5;
     private boolean[][] cells;
     private int size;
 
     public PlacementField(int size) {
-        cells = new boolean[size + PADDING][size + PADDING];
+        cells = new boolean[size][size];
         this.size = size;
     }
 
     public void addShip(Ship ship) {
-        int sizeX = ship.getSizeX() + 2;
-        int sizeY = ship.getSizeY() + 2;
-        for (int x = ship.x - 1; x < ship.x + sizeX; x++) {
-            for (int y = ship.y - 1; y < ship.y + sizeY; y++) {
+        int maxX = ship.x + ship.getSizeX() + 1;
+        int maxY = ship.y + ship.getSizeY() + 1;
+        int minX = ship.x - 1;
+        int minY = ship.y - 1;
+        if(minX < 0) {
+            minX = 0;
+        }
+        if(minY < 0) {
+            minY = 0;
+        }
+        if(maxX > size) {
+            maxX = size;
+        }
+        if(maxY > size) {
+            maxY = size;
+        }
+        for (int x = minX; x < maxX; x++) {
+            for (int y = minY; y < maxY; y++) {
                 cells[x][y] = true;
             }
         }

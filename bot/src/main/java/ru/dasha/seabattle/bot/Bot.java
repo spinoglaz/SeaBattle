@@ -80,12 +80,13 @@ public class Bot extends TextWebSocketHandler {
         PlaceShipsCommand placeShipsCommand = new PlaceShipsCommand();
         placeShipsCommand.ships = new ShipDTO[ships.size()];
         for (int i = 0; i < ships.size(); i++) {
-            ShipDTO shipDTO = placeShipsCommand.ships[i];
+            ShipDTO shipDTO = new ShipDTO();
             Ship ship = ships.get(i);
             shipDTO.x = ship.x;
             shipDTO.y = ship.y;
             shipDTO.size = ship.size;
             shipDTO.vertical = ship.vertical;
+            placeShipsCommand.ships[i] = shipDTO;
         }
         send(session, placeShipsCommand);
     }
