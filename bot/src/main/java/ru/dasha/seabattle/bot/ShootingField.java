@@ -29,11 +29,18 @@ public class ShootingField {
     }
 
     public void miss(int x, int y) {
+        if(x < 0 || y < 0 || x  >= size || y >= size) {
+            return;
+        }
         cells[x][y] = Cell.EMPTY;
     }
 
     public void hit(int x, int y) {
         cells[x][y] = Cell.OCCUPIED;
+        miss(x - 1, y - 1);
+        miss(x + 1, y - 1);
+        miss(x + 1, y + 1);
+        miss(x - 1, y + 1);
     }
 
     public void kill(int x, int y, int size, boolean vertical) {
@@ -44,5 +51,9 @@ public class ShootingField {
                 cells[i][j] = Cell.OCCUPIED;
             }
         }
+        miss(x, y - 1);
+        miss(x, y + sizeY);
+        miss(x - 1, y);
+        miss(x + sizeX, y);
     }
 }

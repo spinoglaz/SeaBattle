@@ -55,6 +55,7 @@ public class Bot extends TextWebSocketHandler {
             }
             if(serverMessage.shot.result == ShootResultDTO.KILL || serverMessage.shot.result == ShootResultDTO.KILL_ALL) {
                 ShipDTO ship = serverMessage.shot.killedShip;
+                field.hit(serverMessage.shot.x, serverMessage.shot.y);
                 field.kill(ship.x, ship.y, ship.size, ship.vertical);
             }
         }

@@ -79,7 +79,7 @@ public class SocketHandler extends TextWebSocketHandler {
     private void removeBattle(UUID battleId) {
         battles.remove(battleId);
         battleSessions.remove(battleId);
-        if(pendingBattleId.equals(battleId)) {
+        if(battleId.equals(pendingBattleId)) {
             pendingBattleId = null;
         }
     }
