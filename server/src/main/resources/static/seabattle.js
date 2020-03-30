@@ -761,6 +761,9 @@ server = {
     shoot: function(target, x, y) {
         this.send({shoot: {target: target, x: x, y: y}})
     },
+    ping: function() {
+        this.send({});
+    },
     send: function(obj) {
         this.ws.send(JSON.stringify(obj));
     },
@@ -799,6 +802,7 @@ game = {
             shot: this.onShot,
             error: this.onServerError,
         });
+        setInterval(function(){server.ping()}, 5000);
     },
     // Server events
     onConnectedToServer: function() {
