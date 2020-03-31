@@ -1,6 +1,9 @@
 package ru.dasha.seabattle.bot;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.scheduling.TaskScheduler;
+import org.springframework.stereotype.Component;
+import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
@@ -8,28 +11,48 @@ import ru.dasha.seabattle.protocol.*;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.concurrent.ScheduledFuture;
 
+@Component
 public class Bot extends TextWebSocketHandler {
     private PlacementStrategy placementStrategy;
     private ShootingStrategy shootingStrategy;
     private ObjectMapper objectMapper;
+    private TaskScheduler taskScheduler;
 
     private String battleId;
     private ShootingField[] fields;
     private int player;
     private int enemyPlayer;
+    private ScheduledFuture<?> scheduledPing;
 
-    public Bot(String battleId) {
-        this.battleId = battleId;
+    public Bot(TaskScheduler taskScheduler) {
         objectMapper = new ObjectMapper();
         placementStrategy = new PlacementStrategy();
         shootingStrategy = new ShootingStrategy();
+        this.taskScheduler = taskScheduler;
+    }
+
+    public void setBattleId(String battleId) {
+        this.battleId = battleId;
     }
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
-        System.out.println("Connected to the server!!!");
+        System.out.println("afterConnectionEstablished");
         joinBattle(session, battleId);
+        scheduledPing = taskScheduler.scheduleAtFixedRate(() -> {
+            try {
+                sendPing(session);
+            } catch (IOException e) {
+            }
+        }, 5000);
+    }
+
+    @Override
+    public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
+        System.out.println("afterConnectionClosed");
+        scheduledPing.cancel(true);
     }
 
     @Override
@@ -117,6 +140,12 @@ public class Bot extends TextWebSocketHandler {
     private void send(WebSocketSession session, ShootCommand shootCommand) throws IOException {
         ClientMessage clientMessage = new ClientMessage();
         clientMessage.shoot = shootCommand;
+        String payload = objectMapper.writeValueAsString(clientMessage);
+        session.sendMessage(new TextMessage(payload));
+    }
+
+    private void sendPing(WebSocketSession session) throws IOException {
+        ClientMessage clientMessage = new ClientMessage();
         String payload = objectMapper.writeValueAsString(clientMessage);
         session.sendMessage(new TextMessage(payload));
     }
