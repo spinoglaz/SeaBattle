@@ -156,6 +156,12 @@ function Ship(size, styleClass) {
     this.disableContextMenu();
 }
 
+const CellState = Object.freeze({
+    uncharted: 'uncharted',
+    empty: 'empty',
+    occupied: 'occupied',
+})
+
 function Field(size, styleClass) {
     this.size = 0;
     this.element = document.createElement('div');
@@ -172,6 +178,7 @@ function Field(size, styleClass) {
     this.onMouseMove = null;
     this.onMouseDown = null;
     this.cells = [];
+    this.cellStates = [];
 
     this.handleEvent = function(e) {
         if (e.type === 'mousemove') return this._onmousemove(e);
@@ -185,11 +192,13 @@ function Field(size, styleClass) {
         this.gridElement.textContent = '';
         const cellCount = size * size;
         this.cells = [];
+        this.cellStates = [];
         for(let i = 0; i < cellCount; ++i) {
             const cell = document.createElement('div');
             cell.classList.add('field-cell');
             this.gridElement.appendChild(cell);
             this.cells.push(cell);
+            this.cellStates.push(CellState.uncharted);
         }
         for (let i = 0; i < this.ships.length; ++i) {
             this.element.removeChild(this.ships[i].element);
@@ -234,6 +243,21 @@ function Field(size, styleClass) {
         if (x < 0 || x >= this.size) return null;
         if (y < 0 || y >= this.size) return null;
         return this.cells[x + y * this.size];
+    };
+    this.getCellState = function(x, y) {
+        if (x < 0 || x >= this.size) return null;
+        if (y < 0 || y >= this.size) return null;
+        return this.cellStates[x + y * this.size];
+    };
+    this.setCellState = function(x, y, state) {
+        if (x < 0 || x >= this.size) return;
+        if (y < 0 || y >= this.size) return;
+        const index = x + y * this.size;
+        const cell = this.cells[index];
+        this.cellStates[index] = state;
+        cell.classList.remove(CellState.empty);
+        cell.classList.remove(CellState.occupied);
+        cell.classList.add(state);
     };
     this._onmousemove = function(e) {
         const pos = calcGridCoordinates(this.gridElement, e, this.size, this.size);
@@ -519,7 +543,7 @@ function BattleController(callbacks) {
         }
     };
     this.onEnemyFieldMouseDown = function(e, x, y) {
-        if (this.status === 'SHOOTING' && !this.waitServer) {
+        if (this.status === 'SHOOTING' && !this.waitServer && this.enemyField.getCellState(x, y) === CellState.uncharted) {
             callbacks.shoot(self.enemy, x, y);
             this.waitServer = true;
         }
@@ -572,24 +596,24 @@ function BattleController(callbacks) {
         const field = this.fields[shot.target];
         const fleet = this.fleets[shot.target];
         if (shot.result === 'MISS') {
-            this._setCellClass(field, shot.x, shot.y, 'empty');
+            field.setCellState(shot.x, shot.y, CellState.empty);
         }
         else if (shot.result === 'HIT') {
-            this._setCellClass(field, shot.x, shot.y, 'hit');
+            field.setCellState(shot.x, shot.y, CellState.occupied);
         }
         else if (shot.result === 'KILL' || shot.result === 'KILL_ALL') {
             const ship = new Ship(shot.killedShip.size);
             ship.setVertical(shot.killedShip.vertical);
             ship.setPosition(shot.killedShip.x, shot.killedShip.y);
             field.addShip(ship);
-            this._setCellClass(field, shot.x, shot.y, 'hit');
+            field.setCellState(shot.x, shot.y, CellState.occupied);
             for (let x = ship.x - 1; x <= ship.x + ship.getSizeX(); x++) {
-                this._setCellClass(field, x, ship.y - 1, 'empty');
-                this._setCellClass(field, x, ship.y + ship.getSizeY(), 'empty');
+                field.setCellState(x, ship.y - 1, CellState.empty);
+                field.setCellState(x, ship.y + ship.getSizeY(), CellState.empty);
             }
             for (let y = ship.y - 1; y <= ship.y + ship.getSizeY(); y++) {
-                this._setCellClass(field, ship.x - 1, y, 'empty');
-                this._setCellClass(field, ship.x + ship.getSizeX(), y, 'empty');
+                field.setCellState(ship.x - 1, y, CellState.empty);
+                field.setCellState(ship.x + ship.getSizeX(), y, CellState.empty);
             }
             const sunkIndex = this._getSunkIndex(fleet, ship.size);
             fleet.ships[sunkIndex].setSunk(true);
@@ -602,11 +626,6 @@ function BattleController(callbacks) {
                 return i;
             }
         }
-    };
-    this._setCellClass = function(field, x, y, styleClass) {
-        const cell = field.getCell(x, y);
-        if (cell == null) return;
-        cell.classList.add(styleClass);
     };
 }
 
