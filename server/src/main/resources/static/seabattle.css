@@ -321,7 +321,7 @@ body {
     background-size: 30%;
 }
 
-.field-cell.hit {
+.field-cell.occupied {
     background-image: url('flame.svg');
     background-repeat: no-repeat;
     background-position: center center;
